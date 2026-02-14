@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# raw downloaded payloads
+/data/raw/*
+!/data/raw/.gitkeep
+
+# logs
+/logs/pipeline.log
