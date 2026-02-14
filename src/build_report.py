@@ -39,6 +39,48 @@ def _prepare_latest_by_player(player_gog: pd.DataFrame, season_code: str) -> pd.
     return scoped.drop_duplicates(["team_code", "player_id"], keep="last")
 
 
+def _safe_date_text(value: pd.Timestamp | None) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    return value.strftime("%Y-%m-%d")
+
+
+def _extract_game_date_range(games_df: pd.DataFrame) -> tuple[str, str]:
+    if "date" not in games_df.columns or games_df.empty:
+        return "N/A", "N/A"
+
+    parsed = pd.to_datetime(games_df["date"], errors="coerce", utc=True).dropna()
+    if parsed.empty:
+        return "N/A", "N/A"
+
+    return _safe_date_text(parsed.min()), _safe_date_text(parsed.max())
+
+
+def _compute_momentum_watch(latest_df: pd.DataFrame, team_code: str) -> pd.DataFrame:
+    team_df = latest_df[latest_df["team_code"] == team_code].copy()
+    if team_df.empty:
+        return team_df
+
+    scoped = team_df[(team_df["min"] >= 10) & (team_df["usage_proxy"] >= 6)].copy()
+    if scoped.empty:
+        return scoped
+
+    eps = 1e-9
+    usage_denom = max(scoped["gog_usage_proxy"].abs().max(), eps)
+    min_denom = max(scoped["gog_min"].abs().max(), eps)
+
+    scoped["gog_ts_capped"] = scoped["gog_ts"].clip(-0.5, 0.5)
+    scoped["gog_usage_proxy_norm"] = scoped["gog_usage_proxy"] / usage_denom
+    scoped["gog_min_norm"] = scoped["gog_min"] / min_denom
+    scoped["FormScore"] = (
+        0.5 * scoped["gog_ts_capped"]
+        + 0.3 * scoped["gog_usage_proxy_norm"]
+        + 0.2 * scoped["gog_min_norm"]
+    )
+
+    return scoped.sort_values(["FormScore", "gog_ts"], ascending=[False, False]).head(10)
+
+
 def _format_table(df: pd.DataFrame, columns: Iterable[str]) -> str:
     cols = list(columns)
     if df.empty:
@@ -55,9 +97,26 @@ def _format_table(df: pd.DataFrame, columns: Iterable[str]) -> str:
         render_df["date"] = pd.to_datetime(render_df["date"], errors="coerce", utc=True).dt.strftime(
             "%Y-%m-%d"
         )
+
+    one_decimal_cols = {"min", "usage_proxy"}
+    three_decimal_cols = {
+        "ts",
+        "efg",
+        "gog_ts",
+        "gog_usage_proxy",
+        "gog_min",
+        "FormScore",
+        "r5_ts",
+        "r5_usage_proxy",
+    }
     numeric_cols = render_df.select_dtypes(include="number").columns
     for col in numeric_cols:
-        render_df[col] = render_df[col].map(lambda v: f"{v:.3f}".rstrip("0").rstrip("."))
+        if col in one_decimal_cols:
+            render_df[col] = render_df[col].map(lambda v: f"{v:.1f}")
+        elif col in three_decimal_cols:
+            render_df[col] = render_df[col].map(lambda v: f"{v:.3f}")
+        else:
+            render_df[col] = render_df[col].map(lambda v: f"{v:.2f}")
 
     return render_df.to_html(index=False, escape=False, border=0, classes="report-table")
 
@@ -77,14 +136,10 @@ def _build_team_section(
     if not filtered.empty:
         filtered = filtered.sort_values(sort_cols, ascending=ascending)
 
-    return (
-        f"<h4>{team_code}</h4>"
-        f"<p class='note'>{note}</p>"
-        f"{_format_table(filtered, columns)}"
-    )
+    return f"<h4>{team_code}</h4>" f"<p class='note'>{note}</p>" f"{_format_table(filtered, columns)}"
 
 
-def build_report(season_code: str) -> tuple[Path, Path]:
+def build_report(season_code: str) -> tuple[Path, Path, str]:
     games = _read_curated("games")
 
     games_all_fallback = False
@@ -103,6 +158,10 @@ def build_report(season_code: str) -> tuple[Path, Path]:
     player_gog_season = player_gog[player_gog["season_code"] == season_code]
 
     latest = _prepare_latest_by_player(player_gog, season_code)
+    min_game_date, max_game_date = _extract_game_date_range(games_all_season)
+    pan_momentum = _compute_momentum_watch(latest, "PAN")
+    oly_momentum = _compute_momentum_watch(latest, "OLY")
+
     generated_at = datetime.now(timezone.utc)
     timestamp = generated_at.strftime("%Y-%m-%d %H:%M:%S UTC")
 
@@ -132,6 +191,19 @@ def build_report(season_code: str) -> tuple[Path, Path]:
     ]
     eff_cols = ["date", "player_name", "min", "ts", "gog_ts", "r5_ts", "usage_proxy"]
     watch_cols = ["date", "player_name", "min", "usage_proxy", "ts", "pts", "ast", "to"]
+    momentum_cols = [
+        "date",
+        "player_name",
+        "min",
+        "usage_proxy",
+        "ts",
+        "gog_ts",
+        "gog_usage_proxy",
+        "gog_min",
+        "FormScore",
+        "r5_ts",
+        "r5_usage_proxy",
+    ]
 
     html = f"""<!doctype html>
 <html lang=\"en\">
@@ -170,6 +242,9 @@ def build_report(season_code: str) -> tuple[Path, Path]:
       <div class=\"card\"><div>PAN/OLY games found</div><div class=\"value\">{len(games_season)}</div></div>
       <div class=\"card\"><div>player_game rows</div><div class=\"value\">{len(player_game_season)}</div></div>
       <div class=\"card\"><div>player_gog rows</div><div class=\"value\">{len(player_gog_season)}</div></div>
+      <div class=\"card\"><div>Games date range</div><div class=\"value\">{min_game_date} → {max_game_date}</div></div>
+      <div class=\"card\"><div>Latest game date</div><div class=\"value\">{max_game_date}</div></div>
+      <div class=\"card\"><div>Report generated</div><div class=\"value\">{timestamp}</div></div>
     </div>
   </section>
 
@@ -197,6 +272,17 @@ def build_report(season_code: str) -> tuple[Path, Path]:
     </div>
   </section>
 
+  <section class=\"section\">
+    <h2>Momentum Watch (latest game per player)</h2>
+    <p class='note'>Filter: min ≥ 10 and usage_proxy ≥ 6 in latest game. FormScore is a heuristic.</p>
+    <div class=\"table-wrap\">
+      <h4>PAN</h4>
+      {_format_table(pan_momentum, momentum_cols)}
+      <h4>OLY</h4>
+      {_format_table(oly_momentum, momentum_cols)}
+    </div>
+  </section>
+
   <section id=\"definitions\" class=\"section\">
     <h2>Footnotes / Definitions</h2>
     <ul>
@@ -220,7 +306,11 @@ def build_report(season_code: str) -> tuple[Path, Path]:
     dated_path = season_dir / f"report_{generated_at.strftime('%Y-%m-%d')}.html"
     latest_path.write_text(html, encoding="utf-8")
     dated_path.write_text(html, encoding="utf-8")
-    return latest_path, dated_path
+
+    latest_size = latest_path.stat().st_size
+    print(f"Latest game date: {max_game_date}")
+    print(f"Wrote reports/latest.html size: {latest_size} bytes")
+    return latest_path, dated_path, max_game_date
 
 
 def main() -> None:
@@ -228,7 +318,7 @@ def main() -> None:
     parser.add_argument("--season", required=True, help="Season code, e.g. E2025")
     args = parser.parse_args()
 
-    latest, dated = build_report(args.season)
+    latest, dated, _latest_game_date = build_report(args.season)
     print(f"Wrote {latest}")
     print(f"Wrote {dated}")
 
