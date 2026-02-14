@@ -21,15 +21,19 @@
     th.sortable { cursor: pointer; }
     .table-wrap { overflow-x: auto; }
     .cell { display: inline-block; padding: 2px 6px; border-radius: 4px; }
+    .badge { padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+    .badge.good { background: #e8f7ee; color: #065f46; }
+    .badge.bad { background: #fde8e8; color: #991b1b; }
     .good { background: #e8f7ee; color: #065f46; font-weight: 600; }
     .bad  { background: #fde8e8; color: #991b1b; font-weight: 600; }
     .ok   { background: #f3f4f6; color: #111827; }
+    .tip { border-left: 4px solid #0f4c81; background: #eef6ff; padding: 10px 12px; border-radius: 6px; margin-top: 12px; }
     #definitions ul { margin-top: 6px; line-height: 1.6; }
     #definitions code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <h1>EuroLeague PAN/OLY Player Report — Season E2025 — Generated 2026-02-14 23:47:04 UTC</h1>
+  <h1>EuroLeague PAN/OLY Player Report — Season E2025 — Generated 2026-02-14 23:56:20 UTC</h1>
   <p class="muted">Jump to <a href="#definitions">definitions</a>.</p>
 
   <section class="summary">
@@ -56,6 +60,731 @@
     </div>
   </section>
 
+  <section class="section">
+    <h2>What we measure &amp; why it matters</h2>
+    <p>We track more than box-score totals because production quality and role context usually explain future games better than single-game points. Efficiency metrics such as TS and eFG tell us whether scoring came from sustainable shot value (threes, free throws, and clean attempts) rather than volume alone.</p>
+    <p>Usage_proxy shows offensive responsibility. A player with high TS on very low usage may simply be finishing easy possessions, while a high-usage player with average TS can still be driving team offense. Reading efficiency together with usage helps separate true creators from low-volume outliers.</p>
+    <p>GoG deltas highlight short-term shocks from one game to the next, which is useful for spotting role changes, injury impacts, or matchup swings quickly. Rolling 5-game metrics (r5_*) smooth one-game noise to reveal underlying form and stabilize interpretation.</p>
+    <p>Turnovers and minutes complete the picture: turnovers end possessions, so rising TO under heavy usage is a warning sign; minutes reflect coach trust and rotation shifts, and sudden minute spikes often precede box-score jumps.</p>
+    <ul>
+      <li><strong>Efficiency (TS, eFG):</strong> shot quality converted into points; better sustainability signal than raw points.</li>
+      <li><strong>usage_proxy:</strong> offensive load proxy that clarifies role and responsibility.</li>
+      <li><strong>GoG deltas:</strong> immediate change detector for form, role, and availability shifts.</li>
+      <li><strong>r5_* rolling:</strong> trend lens that reduces game-level randomness.</li>
+      <li><strong>Turnovers (TO, gog_to):</strong> possession killers, especially concerning when paired with high usage.</li>
+      <li><strong>Minutes (min, gog_min):</strong> rotation confidence indicator; spikes can foreshadow bigger stat lines.</li>
+    </ul>
+    <div class="tip">
+      <strong>How to read this report:</strong> Start with <em>Stack-ranked Insights</em>, then verify context in <em>Top Usage</em>, then confirm direction in <em>Momentum Watch</em>. Treat TS above 1.0 as a likely small-sample/outlier artifact from limited attempts or free-throw weighting.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Stack-ranked Insights (per team)</h2>
+    <p class='note'>Scope: latest game per player, filtered to min ≥ 10. Top 8 per list for PAN and OLY.</p>
+    <div class="table-wrap">
+      <h3>PAN</h3>
+      <h4>Impact Now</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>ImpactNowScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.0</td>
+      <td>9.4</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell good'>11.00</span></td>
+      <td>0.670</td>
+      <td><span class='badge good'>0.855</span></td>
+    </tr>
+    <tr>
+      <td>NUNN, KENDRICK</td>
+      <td>35.0</td>
+      <td>20.6</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td><span class='cell ok'>-0.04</span></td>
+      <td><span class='cell ok'>-4.00</span></td>
+      <td>0.605</td>
+      <td><span class='badge good'>0.595</span></td>
+    </tr>
+    <tr>
+      <td>ROGKAVOPOULOS, NIKOLAOS</td>
+      <td>10.1</td>
+      <td>2.0</td>
+      <td>5.0</td>
+      <td><span class='cell good'>1.250</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>1.25</span></td>
+      <td><span class='cell good'>5.00</span></td>
+      <td>0.467</td>
+      <td><span class='badge good'>0.494</span></td>
+    </tr>
+    <tr>
+      <td>SHORTS, TJ</td>
+      <td>12.1</td>
+      <td>8.0</td>
+      <td>10.0</td>
+      <td><span class='cell good'>0.625</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell bad'>-0.11</span></td>
+      <td><span class='cell bad'>-11.00</span></td>
+      <td>0.534</td>
+      <td><span class='badge good'>0.386</span></td>
+    </tr>
+    <tr>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.2</td>
+      <td>9.4</td>
+      <td>10.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>6.00</span></td>
+      <td>0.511</td>
+      <td><span class='badge good'>0.326</span></td>
+    </tr>
+    <tr>
+      <td>FARIED, KENNETH</td>
+      <td>15.3</td>
+      <td>7.8</td>
+      <td>7.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.603</td>
+      <td><span class='badge good'>0.295</span></td>
+    </tr>
+    <tr>
+      <td>OSMAN, CEDI</td>
+      <td>32.2</td>
+      <td>9.9</td>
+      <td>8.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.392</td>
+      <td><span class='badge good'>0.218</span></td>
+    </tr>
+    <tr>
+      <td>GRIGONIS, MARIUS</td>
+      <td>10.2</td>
+      <td>5.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.100</td>
+      <td><span class='badge good'>0.085</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
+      <h4>Trend</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>TrendScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.0</td>
+      <td>9.4</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell good'>11.00</span></td>
+      <td>0.670</td>
+      <td><span class='badge good'>0.560</span></td>
+    </tr>
+    <tr>
+      <td>ROGKAVOPOULOS, NIKOLAOS</td>
+      <td>10.1</td>
+      <td>2.0</td>
+      <td>5.0</td>
+      <td><span class='cell good'>1.250</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>1.25</span></td>
+      <td><span class='cell good'>5.00</span></td>
+      <td>0.467</td>
+      <td><span class='badge good'>0.340</span></td>
+    </tr>
+    <tr>
+      <td>GRIGONIS, MARIUS</td>
+      <td>10.2</td>
+      <td>5.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.100</td>
+      <td><span class='badge good'>0.291</span></td>
+    </tr>
+    <tr>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.2</td>
+      <td>9.4</td>
+      <td>10.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>6.00</span></td>
+      <td>0.511</td>
+      <td><span class='badge good'>0.286</span></td>
+    </tr>
+    <tr>
+      <td>TOLIOPOULOS, VASSILIS</td>
+      <td>11.3</td>
+      <td>4.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.325</td>
+      <td><span class='badge good'>0.254</span></td>
+    </tr>
+    <tr>
+      <td>FARIED, KENNETH</td>
+      <td>15.3</td>
+      <td>7.8</td>
+      <td>7.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.603</td>
+      <td><span class='badge good'>0.207</span></td>
+    </tr>
+    <tr>
+      <td>OSMAN, CEDI</td>
+      <td>32.2</td>
+      <td>9.9</td>
+      <td>8.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.392</td>
+      <td><span class='badge good'>0.087</span></td>
+    </tr>
+    <tr>
+      <td>GRANT, JERIAN</td>
+      <td>27.4</td>
+      <td>9.0</td>
+      <td>4.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>-0.15</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.536</td>
+      <td><span class='badge good'>-0.041</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
+      <h4>Risk</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>RiskScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>NUNN, KENDRICK</td>
+      <td>35.0</td>
+      <td>20.6</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td><span class='cell ok'>-0.04</span></td>
+      <td><span class='cell ok'>-4.00</span></td>
+      <td>0.605</td>
+      <td><span class='badge bad'>0.662</span></td>
+    </tr>
+    <tr>
+      <td>GRANT, JERIAN</td>
+      <td>27.4</td>
+      <td>9.0</td>
+      <td>4.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>-0.15</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.536</td>
+      <td><span class='badge bad'>0.400</span></td>
+    </tr>
+    <tr>
+      <td>OSMAN, CEDI</td>
+      <td>32.2</td>
+      <td>9.9</td>
+      <td>8.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.392</td>
+      <td><span class='badge bad'>0.140</span></td>
+    </tr>
+    <tr>
+      <td>GRIGONIS, MARIUS</td>
+      <td>10.2</td>
+      <td>5.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.100</td>
+      <td><span class='badge bad'>0.126</span></td>
+    </tr>
+    <tr>
+      <td>FARIED, KENNETH</td>
+      <td>15.3</td>
+      <td>7.8</td>
+      <td>7.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.603</td>
+      <td><span class='badge bad'>0.100</span></td>
+    </tr>
+    <tr>
+      <td>TOLIOPOULOS, VASSILIS</td>
+      <td>11.3</td>
+      <td>4.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.325</td>
+      <td><span class='badge bad'>0.076</span></td>
+    </tr>
+    <tr>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.0</td>
+      <td>9.4</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell good'>11.00</span></td>
+      <td>0.670</td>
+      <td><span class='badge bad'>0.000</span></td>
+    </tr>
+    <tr>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.2</td>
+      <td>9.4</td>
+      <td>10.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>6.00</span></td>
+      <td>0.511</td>
+      <td><span class='badge bad'>0.000</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
+
+      <h3>OLY</h3>
+      <h4>Impact Now</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>ImpactNowScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.5</td>
+      <td>20.0</td>
+      <td>23.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.621</td>
+      <td><span class='badge good'>0.720</span></td>
+    </tr>
+    <tr>
+      <td>FOURNIER, EVAN</td>
+      <td>22.5</td>
+      <td>15.9</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell good'>7.00</span></td>
+      <td>0.651</td>
+      <td><span class='badge good'>0.554</span></td>
+    </tr>
+    <tr>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>16.8</td>
+      <td>17.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td>0.602</td>
+      <td><span class='badge good'>0.553</span></td>
+    </tr>
+    <tr>
+      <td>JOSEPH, CORY</td>
+      <td>14.1</td>
+      <td>4.0</td>
+      <td>8.0</td>
+      <td><span class='cell good'>1.000</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.48</span></td>
+      <td><span class='cell good'>5.00</span></td>
+      <td>0.577</td>
+      <td><span class='badge good'>0.547</span></td>
+    </tr>
+    <tr>
+      <td>JONES, TYRIQUE</td>
+      <td>20.8</td>
+      <td>3.9</td>
+      <td>4.0</td>
+      <td><span class='cell good'>1.064</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.04</span></td>
+      <td><span class='cell bad'>-6.00</span></td>
+      <td>0.759</td>
+      <td><span class='badge good'>0.467</span></td>
+    </tr>
+    <tr>
+      <td>NTILIKINA, FRANK</td>
+      <td>10.6</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td><span class='cell good'>1.500</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>1.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.670</td>
+      <td><span class='badge good'>0.419</span></td>
+    </tr>
+    <tr>
+      <td>WALKUP, THOMAS</td>
+      <td>30.7</td>
+      <td>4.9</td>
+      <td>5.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.676</td>
+      <td><span class='badge good'>0.394</span></td>
+    </tr>
+    <tr>
+      <td>MCKISSIC, SHAQUIELLE</td>
+      <td>14.5</td>
+      <td>3.9</td>
+      <td>5.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.42</span></td>
+      <td><span class='cell bad'>-5.00</span></td>
+      <td>0.523</td>
+      <td><span class='badge good'>0.384</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
+      <h4>Trend</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>TrendScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>JOSEPH, CORY</td>
+      <td>14.1</td>
+      <td>4.0</td>
+      <td>8.0</td>
+      <td><span class='cell good'>1.000</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.48</span></td>
+      <td><span class='cell good'>5.00</span></td>
+      <td>0.577</td>
+      <td><span class='badge good'>0.361</span></td>
+    </tr>
+    <tr>
+      <td>FOURNIER, EVAN</td>
+      <td>22.5</td>
+      <td>15.9</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell good'>7.00</span></td>
+      <td>0.651</td>
+      <td><span class='badge good'>0.331</span></td>
+    </tr>
+    <tr>
+      <td>NTILIKINA, FRANK</td>
+      <td>10.6</td>
+      <td>1.0</td>
+      <td>3.0</td>
+      <td><span class='cell good'>1.500</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>1.50</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.670</td>
+      <td><span class='badge good'>0.326</span></td>
+    </tr>
+    <tr>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.5</td>
+      <td>20.0</td>
+      <td>23.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.621</td>
+      <td><span class='badge good'>0.187</span></td>
+    </tr>
+    <tr>
+      <td>PAPANIKOLAOU, KOSTAS</td>
+      <td>16.3</td>
+      <td>5.0</td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.25</span></td>
+      <td><span class='cell ok'>2.00</span></td>
+      <td>0.199</td>
+      <td><span class='badge good'>0.104</span></td>
+    </tr>
+    <tr>
+      <td>WALKUP, THOMAS</td>
+      <td>30.7</td>
+      <td>4.9</td>
+      <td>5.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.676</td>
+      <td><span class='badge good'>0.066</span></td>
+    </tr>
+    <tr>
+      <td>MILUTINOV, NIKOLA</td>
+      <td>13.2</td>
+      <td>5.3</td>
+      <td>6.0</td>
+      <td><span class='cell good'>0.694</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.13</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td>0.684</td>
+      <td><span class='badge good'>0.013</span></td>
+    </tr>
+    <tr>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>16.8</td>
+      <td>17.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td>0.602</td>
+      <td><span class='badge good'>0.001</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
+      <h4>Risk</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>to</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>r5_ts</th>
+      <th>RiskScore</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.5</td>
+      <td>20.0</td>
+      <td>23.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td>0.621</td>
+      <td><span class='badge bad'>0.583</span></td>
+    </tr>
+    <tr>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>16.8</td>
+      <td>17.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td>0.602</td>
+      <td><span class='badge bad'>0.469</span></td>
+    </tr>
+    <tr>
+      <td>MORRIS, MONTE</td>
+      <td>10.5</td>
+      <td>4.3</td>
+      <td>1.0</td>
+      <td><span class='cell bad'>0.116</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell bad'>-0.22</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td>0.224</td>
+      <td><span class='badge bad'>0.350</span></td>
+    </tr>
+    <tr>
+      <td>PAPANIKOLAOU, KOSTAS</td>
+      <td>16.3</td>
+      <td>5.0</td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.25</span></td>
+      <td><span class='cell ok'>2.00</span></td>
+      <td>0.199</td>
+      <td><span class='badge bad'>0.300</span></td>
+    </tr>
+    <tr>
+      <td>FOURNIER, EVAN</td>
+      <td>22.5</td>
+      <td>15.9</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell good'>7.00</span></td>
+      <td>0.651</td>
+      <td><span class='badge bad'>0.286</span></td>
+    </tr>
+    <tr>
+      <td>WALKUP, THOMAS</td>
+      <td>30.7</td>
+      <td>4.9</td>
+      <td>5.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.676</td>
+      <td><span class='badge bad'>0.133</span></td>
+    </tr>
+    <tr>
+      <td>JONES, TYRIQUE</td>
+      <td>20.8</td>
+      <td>3.9</td>
+      <td>4.0</td>
+      <td><span class='cell good'>1.064</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.04</span></td>
+      <td><span class='cell bad'>-6.00</span></td>
+      <td>0.759</td>
+      <td><span class='badge bad'>0.133</span></td>
+    </tr>
+    <tr>
+      <td>WARD, TYSON</td>
+      <td>17.5</td>
+      <td>8.4</td>
+      <td>7.0</td>
+      <td><span class='cell bad'>0.470</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.494</td>
+      <td><span class='badge bad'>0.110</span></td>
+    </tr>
+  </tbody>
+</table>
+      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
+    </div>
+  </section>
+
   
 
   <section class="summary">
@@ -67,7 +796,7 @@
       <div class="card"><div>player_gog rows</div><div class="value">1287</div></div>
       <div class="card"><div>Games date range</div><div class="value">2025-09-30 → 2026-02-13</div></div>
       <div class="card"><div>Latest game date</div><div class="value">2026-02-13</div></div>
-      <div class="card"><div>Report generated</div><div class="value">2026-02-14 23:47:04 UTC</div></div>
+      <div class="card"><div>Report generated</div><div class="value">2026-02-14 23:56:20 UTC</div></div>
     </div>
   </section>
 
@@ -1349,11 +2078,11 @@
   <section id="definitions" class="section">
     <h2>Footnotes / Definitions</h2>
     <ul>
-      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code></li>
-      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code></li>
-      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code></li>
-      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code></li>
-      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code></li>
+      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code> — scoring efficiency adjusted for 3s and free throws; best single-number scorer efficiency proxy.</li>
+      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code> — shooting value per attempt, rewarding 3-point shot value above 2s.</li>
+      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code> — approximate possessions a player consumed; proxy for offensive load.</li>
+      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code> — detects sudden changes game-to-game (role, matchup, injury, form).</li>
+      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code> — reduces randomness and is usually better for reading true form.</li>
       <li><strong>min conversion:</strong> <code>MM:SS → minutes_float</code></li>
     </ul>
   </section>
