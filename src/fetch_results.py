@@ -66,6 +66,8 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
     total_games = len(games_df)
     logger.info("Total games parsed for %s: %s", season_code, total_games)
 
+    games_df = games_df.sort_values(["date", "gamecode_num"], kind="stable").reset_index(drop=True)
+
     pan_oly_df = games_df[
         games_df["home_team_code"].isin(TEAMS) | games_df["away_team_code"].isin(TEAMS)
     ].copy()
@@ -73,6 +75,9 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
 
     pan_oly_count = len(pan_oly_df)
     logger.info("PAN/OLY games found for %s: %s", season_code, pan_oly_count)
+
+    games_df.to_parquet(CURATED_DIR / "games_all.parquet", index=False)
+    games_df.to_csv(CURATED_DIR / "games_all.csv", index=False)
 
     pan_oly_df.to_parquet(CURATED_DIR / "games.parquet", index=False)
     pan_oly_df.to_csv(CURATED_DIR / "games.csv", index=False)

@@ -86,13 +86,19 @@ def _build_team_section(
 
 def build_report(season_code: str) -> tuple[Path, Path]:
     games = _read_curated("games")
+
+    games_all_fallback = False
+    try:
+        games_all = _read_curated("games_all")
+    except FileNotFoundError:
+        games_all = games
+        games_all_fallback = True
+
     player_game = _read_curated("player_game")
     player_gog = _read_curated("player_gog")
 
+    games_all_season = games_all[games_all["season_code"] == season_code].copy()
     games_season = games[games["season_code"] == season_code].copy()
-    pan_oly_games = games_season[
-        games_season["home_team_code"].isin(TEAMS) | games_season["away_team_code"].isin(TEAMS)
-    ]
     player_game_season = player_game[player_game["season_code"] == season_code]
     player_gog_season = player_gog[player_gog["season_code"] == season_code]
 
@@ -100,12 +106,17 @@ def build_report(season_code: str) -> tuple[Path, Path]:
     generated_at = datetime.now(timezone.utc)
     timestamp = generated_at.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    warning_banner = ""
+    warning_messages = []
     if len(player_gog_season) == 0:
-        warning_banner = (
-            "<div class='warning'>Warning: player_gog has 0 rows for this season. "
-            "Tables are intentionally empty.</div>"
+        warning_messages.append(
+            "Warning: player_gog has 0 rows for this season. Tables are intentionally empty."
         )
+    if games_all_fallback:
+        warning_messages.append(
+            "games_all dataset missing; 'Total games parsed' is currently using PAN/OLY filtered games."
+        )
+
+    warning_banner = "".join(f"<div class='warning'>{msg}</div>" for msg in warning_messages)
 
     points_cols = [
         "date",
@@ -155,8 +166,8 @@ def build_report(season_code: str) -> tuple[Path, Path]:
   <section class=\"summary\">
     <h2>Data freshness</h2>
     <div class=\"summary-grid\">
-      <div class=\"card\"><div>Total games parsed</div><div class=\"value\">{len(games_season)}</div></div>
-      <div class=\"card\"><div>PAN/OLY games found</div><div class=\"value\">{len(pan_oly_games)}</div></div>
+      <div class=\"card\"><div>Total games parsed</div><div class=\"value\">{len(games_all_season)}</div></div>
+      <div class=\"card\"><div>PAN/OLY games found</div><div class=\"value\">{len(games_season)}</div></div>
       <div class=\"card\"><div>player_game rows</div><div class=\"value\">{len(player_game_season)}</div></div>
       <div class=\"card\"><div>player_gog rows</div><div class=\"value\">{len(player_gog_season)}</div></div>
     </div>
