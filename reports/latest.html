@@ -10,21 +10,51 @@
     a { color: #0f4c81; }
     .muted { color: #6b7280; }
     .summary, .section { margin-top: 20px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
     .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
     .value { font-size: 1.3rem; font-weight: 700; }
     .note { display: inline-block; background: #eef6ff; border: 1px solid #c9def8; color: #184e87; border-radius: 999px; padding: 4px 10px; font-size: 0.85rem; margin: 8px 0; }
     .warning { background: #fff4e5; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-top: 16px; font-weight: 600; color: #92400e; }
-    table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.92rem; }
-    th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.90rem; table-layout: auto; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
     thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+    th.sortable { cursor: pointer; }
     .table-wrap { overflow-x: auto; }
-    #definitions ul { margin-top: 6px; }
+    .cell { display: inline-block; padding: 2px 6px; border-radius: 4px; }
+    .good { background: #e8f7ee; color: #065f46; font-weight: 600; }
+    .bad  { background: #fde8e8; color: #991b1b; font-weight: 600; }
+    .ok   { background: #f3f4f6; color: #111827; }
+    #definitions ul { margin-top: 6px; line-height: 1.6; }
+    #definitions code { background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <h1>EuroLeague PAN/OLY Player Report — Season E2025 — Generated 2026-02-14 23:38:34 UTC</h1>
+  <h1>EuroLeague PAN/OLY Player Report — Season E2025 — Generated 2026-02-14 23:44:25 UTC</h1>
   <p class="muted">Jump to <a href="#definitions">definitions</a>.</p>
+
+  <section class="summary">
+    <h2>Executive Summary</h2>
+    <div class="summary-grid">
+      <div class="card">
+        <h3>PAN</h3>
+        <ul>
+          <li><strong>Top scoring mover:</strong> HERNANGOMEZ, JUANCHO (GoG PTS +11.00, MIN 37.0)</li>
+          <li><strong>Top efficiency mover:</strong> HERNANGOMEZ, JUANCHO (GoG TS +0.445, MIN 37.0)</li>
+          <li><strong>Highest usage:</strong> NUNN, KENDRICK (USG 20.6, MIN 35.0)</li>
+          <li><strong>Watchlist (high usage, low TS):</strong> None</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>OLY</h3>
+        <ul>
+          <li><strong>Top scoring mover:</strong> FOURNIER, EVAN (GoG PTS +7.00, MIN 22.5)</li>
+          <li><strong>Top efficiency mover:</strong> WARD, TYSON (GoG TS +0.033, MIN 17.5)</li>
+          <li><strong>Highest usage:</strong> VEZENKOV, SASHA (USG 20.0, MIN 32.5)</li>
+          <li><strong>Watchlist (high usage, low TS):</strong> None</li>
+        </ul>
+      </div>
+    </div>
+  </section>
 
   
 
@@ -37,7 +67,7 @@
       <div class="card"><div>player_gog rows</div><div class="value">1287</div></div>
       <div class="card"><div>Games date range</div><div class="value">2025-09-30 → 2026-02-13</div></div>
       <div class="card"><div>Latest game date</div><div class="value">2026-02-13</div></div>
-      <div class="card"><div>Report generated</div><div class="value">2026-02-14 23:38:34 UTC</div></div>
+      <div class="card"><div>Report generated</div><div class="value">2026-02-14 23:44:25 UTC</div></div>
     </div>
   </section>
 
@@ -50,13 +80,22 @@
       <th>date</th>
       <th>player_name</th>
       <th>min</th>
-      <th>pts</th>
-      <th>gog_pts</th>
-      <th>r5_pts</th>
-      <th>ts</th>
-      <th>r5_ts</th>
       <th>usage_proxy</th>
-      <th>r5_usage_proxy</th>
+      <th>pts</th>
+      <th>ast</th>
+      <th>reb</th>
+      <th>stl</th>
+      <th>blk</th>
+      <th>to</th>
+      <th>pf</th>
+      <th>ts</th>
+      <th>efg</th>
+      <th>gog_pts</th>
+      <th>gog_ts</th>
+      <th>gog_to</th>
+      <th>r5_pts</th>
+      <th>r5_ts</th>
+      <th>r5_efg</th>
     </tr>
   </thead>
   <tbody>
@@ -64,133 +103,232 @@
       <td>2026-02-13</td>
       <td>HERNANGOMEZ, JUANCHO</td>
       <td>37.0</td>
-      <td>18.00</td>
-      <td>11.00</td>
-      <td>9.40</td>
-      <td>0.953</td>
-      <td>0.670</td>
       <td>9.4</td>
-      <td>7.664</td>
+      <td>18.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td>0.944</td>
+      <td><span class='cell good'>11.00</span></td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>9.4</td>
+      <td>0.670</td>
+      <td>0.650</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SLOUKAS, KOSTAS</td>
       <td>19.2</td>
-      <td>10.00</td>
-      <td>6.00</td>
-      <td>12.40</td>
-      <td>0.530</td>
-      <td>0.511</td>
       <td>9.4</td>
-      <td>11.408</td>
+      <td>10.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>3.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td>0.500</td>
+      <td><span class='cell good'>6.00</span></td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>12.4</td>
+      <td>0.511</td>
+      <td>0.474</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>ROGKAVOPOULOS, NIKOLAOS</td>
       <td>10.1</td>
-      <td>5.00</td>
-      <td>5.00</td>
-      <td>4.60</td>
-      <td>1.250</td>
-      <td>0.467</td>
       <td>2.0</td>
-      <td>4.552</td>
+      <td>5.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>1.250</span></td>
+      <td>1.250</td>
+      <td><span class='cell good'>5.00</span></td>
+      <td><span class='cell good'>1.25</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>4.6</td>
+      <td>0.467</td>
+      <td>0.458</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>OSMAN, CEDI</td>
       <td>32.2</td>
-      <td>8.00</td>
-      <td>3.00</td>
-      <td>7.20</td>
-      <td>0.450</td>
-      <td>0.392</td>
       <td>9.9</td>
-      <td>10.168</td>
+      <td>8.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td>0.375</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>7.2</td>
+      <td>0.392</td>
+      <td>0.353</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>FARIED, KENNETH</td>
       <td>15.3</td>
-      <td>7.00</td>
-      <td>3.00</td>
-      <td>4.20</td>
-      <td>0.608</td>
-      <td>0.603</td>
       <td>7.8</td>
-      <td>4.816</td>
+      <td>7.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td>0.500</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>4.2</td>
+      <td>0.603</td>
+      <td>0.600</td>
     </tr>
     <tr>
       <td>2026-02-05</td>
       <td>GRIGONIS, MARIUS</td>
       <td>10.2</td>
-      <td>3.00</td>
-      <td>3.00</td>
-      <td>0.60</td>
-      <td>0.500</td>
-      <td>0.100</td>
       <td>5.0</td>
-      <td>1.200</td>
+      <td>3.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td>0.500</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell bad'>2.00</span></td>
+      <td>0.6</td>
+      <td>0.100</td>
+      <td>0.100</td>
     </tr>
     <tr>
       <td>2026-02-05</td>
       <td>TOLIOPOULOS, VASSILIS</td>
       <td>11.3</td>
-      <td>3.00</td>
-      <td>3.00</td>
-      <td>5.80</td>
-      <td>0.500</td>
-      <td>0.325</td>
       <td>4.0</td>
-      <td>5.928</td>
+      <td>3.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td>0.500</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>5.8</td>
+      <td>0.325</td>
+      <td>0.292</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>GRANT, JERIAN</td>
       <td>27.4</td>
-      <td>4.00</td>
-      <td>0.00</td>
-      <td>11.20</td>
-      <td>0.250</td>
-      <td>0.536</td>
       <td>9.0</td>
-      <td>11.928</td>
+      <td>4.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>4.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.250</td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell bad'>-0.15</span></td>
+      <td><span class='cell good'>-2.00</span></td>
+      <td>11.2</td>
+      <td>0.536</td>
+      <td>0.515</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>HOLMES, RICHAUN</td>
       <td>9.0</td>
-      <td>4.00</td>
-      <td>0.00</td>
-      <td>6.60</td>
-      <td>0.694</td>
-      <td>0.575</td>
       <td>2.9</td>
-      <td>6.544</td>
+      <td>4.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.694</span></td>
+      <td>1.000</td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>6.6</td>
+      <td>0.575</td>
+      <td>0.643</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>NUNN, KENDRICK</td>
       <td>35.0</td>
-      <td>17.00</td>
-      <td>-4.00</td>
-      <td>20.20</td>
-      <td>0.511</td>
-      <td>0.605</td>
       <td>20.6</td>
-      <td>19.312</td>
+      <td>17.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>4.0</td>
+      <td>0.0</td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td>5.0</td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td>0.464</td>
+      <td><span class='cell ok'>-4.00</span></td>
+      <td><span class='cell ok'>-0.04</span></td>
+      <td><span class='cell bad'>2.00</span></td>
+      <td>20.2</td>
+      <td>0.605</td>
+      <td>0.543</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SHORTS, TJ</td>
       <td>12.1</td>
-      <td>10.00</td>
-      <td>-11.00</td>
-      <td>11.00</td>
-      <td>0.625</td>
-      <td>0.534</td>
       <td>8.0</td>
-      <td>11.680</td>
+      <td>10.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>0.625</span></td>
+      <td>0.625</td>
+      <td><span class='cell bad'>-11.00</span></td>
+      <td><span class='cell bad'>-0.11</span></td>
+      <td><span class='cell good'>-3.00</span></td>
+      <td>11.0</td>
+      <td>0.534</td>
+      <td>0.477</td>
     </tr>
   </tbody>
 </table>
@@ -200,13 +338,22 @@
       <th>date</th>
       <th>player_name</th>
       <th>min</th>
-      <th>pts</th>
-      <th>gog_pts</th>
-      <th>r5_pts</th>
-      <th>ts</th>
-      <th>r5_ts</th>
       <th>usage_proxy</th>
-      <th>r5_usage_proxy</th>
+      <th>pts</th>
+      <th>ast</th>
+      <th>reb</th>
+      <th>stl</th>
+      <th>blk</th>
+      <th>to</th>
+      <th>pf</th>
+      <th>ts</th>
+      <th>efg</th>
+      <th>gog_pts</th>
+      <th>gog_ts</th>
+      <th>gog_to</th>
+      <th>r5_pts</th>
+      <th>r5_ts</th>
+      <th>r5_efg</th>
     </tr>
   </thead>
   <tbody>
@@ -214,181 +361,316 @@
       <td>2026-02-12</td>
       <td>FOURNIER, EVAN</td>
       <td>22.5</td>
-      <td>18.00</td>
-      <td>7.00</td>
-      <td>12.40</td>
-      <td>0.605</td>
-      <td>0.651</td>
       <td>15.9</td>
-      <td>11.216</td>
+      <td>18.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>3.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td>0.571</td>
+      <td><span class='cell good'>7.00</span></td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>12.4</td>
+      <td>0.651</td>
+      <td>0.616</td>
     </tr>
     <tr>
       <td>2026-02-06</td>
       <td>JOSEPH, CORY</td>
       <td>14.1</td>
-      <td>8.00</td>
-      <td>5.00</td>
-      <td>4.33</td>
-      <td>1.000</td>
-      <td>0.577</td>
       <td>4.0</td>
-      <td>5.547</td>
+      <td>8.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>1.000</span></td>
+      <td>1.000</td>
+      <td><span class='cell good'>5.00</span></td>
+      <td><span class='cell good'>0.48</span></td>
+      <td><span class='cell good'>-4.00</span></td>
+      <td>4.3</td>
+      <td>0.577</td>
+      <td>0.500</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>VEZENKOV, SASHA</td>
       <td>32.5</td>
-      <td>23.00</td>
-      <td>3.00</td>
-      <td>18.80</td>
-      <td>0.640</td>
-      <td>0.621</td>
       <td>20.0</td>
-      <td>16.576</td>
+      <td>23.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td>0.607</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>18.8</td>
+      <td>0.621</td>
+      <td>0.563</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>NTILIKINA, FRANK</td>
       <td>10.6</td>
-      <td>3.00</td>
-      <td>3.00</td>
-      <td>2.80</td>
-      <td>1.500</td>
-      <td>0.670</td>
       <td>1.0</td>
-      <td>3.200</td>
+      <td>3.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>1.500</span></td>
+      <td>1.500</td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>1.50</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>2.8</td>
+      <td>0.670</td>
+      <td>0.670</td>
     </tr>
     <tr>
       <td>2026-01-22</td>
       <td>PAPANIKOLAOU, KOSTAS</td>
       <td>16.3</td>
-      <td>2.00</td>
-      <td>2.00</td>
-      <td>3.00</td>
-      <td>0.250</td>
-      <td>0.199</td>
       <td>5.0</td>
-      <td>6.000</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.250</td>
+      <td><span class='cell ok'>2.00</span></td>
+      <td><span class='cell good'>0.25</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>3.0</td>
+      <td>0.199</td>
+      <td>0.199</td>
     </tr>
     <tr>
       <td>2026-01-06</td>
       <td>ANTETOKOUNMPO, KOSTAS</td>
       <td>6.5</td>
-      <td>2.00</td>
-      <td>2.00</td>
-      <td>0.40</td>
-      <td>0.500</td>
-      <td>0.100</td>
       <td>2.0</td>
-      <td>0.400</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td>0.500</td>
+      <td><span class='cell ok'>2.00</span></td>
+      <td><span class='cell good'>0.50</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.4</td>
+      <td>0.100</td>
+      <td>0.100</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>WARD, TYSON</td>
       <td>17.5</td>
-      <td>7.00</td>
-      <td>0.00</td>
-      <td>7.20</td>
-      <td>0.470</td>
-      <td>0.494</td>
       <td>8.4</td>
-      <td>8.680</td>
+      <td>7.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.470</span></td>
+      <td>0.429</td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>7.2</td>
+      <td>0.494</td>
+      <td>0.453</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>WALKUP, THOMAS</td>
       <td>30.7</td>
-      <td>5.00</td>
-      <td>0.00</td>
-      <td>5.00</td>
-      <td>0.868</td>
-      <td>0.676</td>
       <td>4.9</td>
-      <td>5.976</td>
+      <td>5.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td>0.750</td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>5.0</td>
+      <td>0.676</td>
+      <td>0.652</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>DORSEY, TYLER</td>
       <td>24.3</td>
-      <td>17.00</td>
-      <td>-1.00</td>
-      <td>16.20</td>
-      <td>0.618</td>
-      <td>0.602</td>
       <td>16.8</td>
-      <td>16.384</td>
+      <td>17.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td>0.583</td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell bad'>3.00</span></td>
+      <td>16.2</td>
+      <td>0.602</td>
+      <td>0.570</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>MILUTINOV, NIKOLA</td>
       <td>13.2</td>
-      <td>6.00</td>
-      <td>-1.00</td>
-      <td>9.40</td>
-      <td>0.694</td>
-      <td>0.684</td>
       <td>5.3</td>
-      <td>7.648</td>
+      <td>6.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>0.694</span></td>
+      <td>0.667</td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td><span class='cell good'>0.13</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>9.4</td>
+      <td>0.684</td>
+      <td>0.641</td>
     </tr>
     <tr>
       <td>2026-01-09</td>
       <td>MORRIS, MONTE</td>
       <td>10.5</td>
-      <td>1.00</td>
-      <td>-1.00</td>
-      <td>2.75</td>
-      <td>0.116</td>
-      <td>0.224</td>
       <td>4.3</td>
-      <td>5.570</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.116</span></td>
+      <td>0.000</td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td><span class='cell bad'>-0.22</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>2.8</td>
+      <td>0.224</td>
+      <td>0.133</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>HALL, DONTA</td>
       <td>6.1</td>
-      <td>2.00</td>
-      <td>-3.00</td>
-      <td>3.40</td>
-      <td>1.000</td>
-      <td>0.519</td>
       <td>2.0</td>
-      <td>2.552</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>1.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell good'>1.000</span></td>
+      <td>1.000</td>
+      <td><span class='cell ok'>-3.00</span></td>
+      <td><span class='cell good'>0.13</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>3.4</td>
+      <td>0.519</td>
+      <td>0.533</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>MCKISSIC, SHAQUIELLE</td>
       <td>14.5</td>
-      <td>5.00</td>
-      <td>-5.00</td>
-      <td>5.00</td>
-      <td>0.868</td>
-      <td>0.523</td>
       <td>3.9</td>
-      <td>4.744</td>
+      <td>5.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td>1.250</td>
+      <td><span class='cell bad'>-5.00</span></td>
+      <td><span class='cell good'>0.42</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>5.0</td>
+      <td>0.523</td>
+      <td>0.555</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>JONES, TYRIQUE</td>
       <td>20.8</td>
-      <td>4.00</td>
-      <td>-6.00</td>
-      <td>8.80</td>
-      <td>1.064</td>
-      <td>0.759</td>
       <td>3.9</td>
-      <td>6.776</td>
+      <td>4.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>2.0</td>
+      <td><span class='cell good'>1.064</span></td>
+      <td>1.000</td>
+      <td><span class='cell bad'>-6.00</span></td>
+      <td><span class='cell ok'>0.04</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>8.8</td>
+      <td>0.759</td>
+      <td>0.643</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>PETERS, ALEC</td>
       <td>7.5</td>
-      <td>2.00</td>
-      <td>-6.00</td>
-      <td>4.80</td>
-      <td>0.250</td>
-      <td>0.640</td>
       <td>4.0</td>
-      <td>3.904</td>
+      <td>2.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>1.0</td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>1.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.250</td>
+      <td><span class='cell bad'>-6.00</span></td>
+      <td><span class='cell bad'>-0.43</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>4.8</td>
+      <td>0.640</td>
+      <td>0.670</td>
     </tr>
   </tbody>
 </table>
@@ -404,10 +686,15 @@
       <th>date</th>
       <th>player_name</th>
       <th>min</th>
-      <th>ts</th>
-      <th>gog_ts</th>
-      <th>r5_ts</th>
       <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>efg</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>to</th>
+      <th>gog_to</th>
+      <th>r5_ts</th>
     </tr>
   </thead>
   <tbody>
@@ -415,64 +702,99 @@
       <td>2026-02-13</td>
       <td>HERNANGOMEZ, JUANCHO</td>
       <td>37.0</td>
-      <td>0.953</td>
-      <td>0.445</td>
-      <td>0.670</td>
       <td>9.4</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td>0.944</td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell good'>11.00</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.670</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SLOUKAS, KOSTAS</td>
       <td>19.2</td>
-      <td>0.530</td>
-      <td>0.219</td>
-      <td>0.511</td>
       <td>9.4</td>
+      <td>10.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td>0.500</td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>6.00</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>0.511</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>OSMAN, CEDI</td>
       <td>32.2</td>
-      <td>0.450</td>
-      <td>0.186</td>
-      <td>0.392</td>
       <td>9.9</td>
+      <td>8.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td>0.375</td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>0.392</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>FARIED, KENNETH</td>
       <td>15.3</td>
-      <td>0.608</td>
-      <td>0.157</td>
-      <td>0.603</td>
       <td>7.8</td>
+      <td>7.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td>0.500</td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>0.603</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>NUNN, KENDRICK</td>
       <td>35.0</td>
-      <td>0.511</td>
-      <td>-0.039</td>
-      <td>0.605</td>
       <td>20.6</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td>0.464</td>
+      <td><span class='cell ok'>-0.04</span></td>
+      <td><span class='cell ok'>-4.00</span></td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td><span class='cell bad'>2.00</span></td>
+      <td>0.605</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SHORTS, TJ</td>
       <td>12.1</td>
-      <td>0.625</td>
-      <td>-0.114</td>
-      <td>0.534</td>
       <td>8.0</td>
+      <td>10.0</td>
+      <td><span class='cell good'>0.625</span></td>
+      <td>0.625</td>
+      <td><span class='cell bad'>-0.11</span></td>
+      <td><span class='cell bad'>-11.00</span></td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>-3.00</span></td>
+      <td>0.534</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>GRANT, JERIAN</td>
       <td>27.4</td>
-      <td>0.250</td>
-      <td>-0.150</td>
-      <td>0.536</td>
       <td>9.0</td>
+      <td>4.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.250</td>
+      <td><span class='cell bad'>-0.15</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>-2.00</span></td>
+      <td>0.536</td>
     </tr>
   </tbody>
 </table>
@@ -482,10 +804,15 @@
       <th>date</th>
       <th>player_name</th>
       <th>min</th>
-      <th>ts</th>
-      <th>gog_ts</th>
-      <th>r5_ts</th>
       <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>efg</th>
+      <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>to</th>
+      <th>gog_to</th>
+      <th>r5_ts</th>
     </tr>
   </thead>
   <tbody>
@@ -493,37 +820,57 @@
       <td>2026-02-12</td>
       <td>WARD, TYSON</td>
       <td>17.5</td>
-      <td>0.470</td>
-      <td>0.033</td>
-      <td>0.494</td>
       <td>8.4</td>
+      <td>7.0</td>
+      <td><span class='cell bad'>0.470</span></td>
+      <td>0.429</td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>0.494</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>VEZENKOV, SASHA</td>
       <td>32.5</td>
-      <td>0.640</td>
-      <td>-0.143</td>
-      <td>0.621</td>
       <td>20.0</td>
+      <td>23.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td>0.607</td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>0.621</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>DORSEY, TYLER</td>
       <td>24.3</td>
-      <td>0.618</td>
-      <td>-0.177</td>
-      <td>0.602</td>
       <td>16.8</td>
+      <td>17.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td>0.583</td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td><span class='cell bad'>3.00</span></td>
+      <td>0.602</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>FOURNIER, EVAN</td>
       <td>22.5</td>
-      <td>0.605</td>
-      <td>-0.495</td>
-      <td>0.651</td>
       <td>15.9</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td>0.571</td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell good'>7.00</span></td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>0.651</td>
     </tr>
   </tbody>
 </table>
@@ -533,8 +880,227 @@
   <section class="section">
     <h2>High usage, low efficiency (watchlist)</h2>
     <div class="table-wrap">
-      <h4>PAN</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>ts</th><th>pts</th><th>ast</th><th>to</th></tr></thead><tbody><tr><td colspan='8'>No rows match filter.</td></tr></tbody></table>
-      <h4>OLY</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>ts</th><th>pts</th><th>ast</th><th>to</th></tr></thead><tbody><tr><td colspan='8'>No rows match filter.</td></tr></tbody></table>
+      <h4>PAN</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table class='report-table'><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>pts</th><th>ts</th><th>ast</th><th>to</th><th>r5_ts</th></tr></thead><tbody><tr><td colspan='9'>No rows match filter.</td></tr></tbody></table>
+      <h4>OLY</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table class='report-table'><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>pts</th><th>ts</th><th>ast</th><th>to</th><th>r5_ts</th></tr></thead><tbody><tr><td colspan='9'>No rows match filter.</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Top Usage (latest game)</h2>
+    <p class='note'>usage_proxy approximates possessions used: <code>FGA + 0.44 × FTA + TO</code>.</p>
+    <div class="table-wrap">
+      <h4>PAN</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>ast</th>
+      <th>to</th>
+      <th>r5_ts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-13</td>
+      <td>NUNN, KENDRICK</td>
+      <td>35.0</td>
+      <td>20.6</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td>0.0</td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td>0.605</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>OSMAN, CEDI</td>
+      <td>32.2</td>
+      <td>9.9</td>
+      <td>8.0</td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.392</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.0</td>
+      <td>9.4</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.953</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>0.670</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.2</td>
+      <td>9.4</td>
+      <td>10.0</td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>0.511</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>GRANT, JERIAN</td>
+      <td>27.4</td>
+      <td>9.0</td>
+      <td>4.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.536</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SHORTS, TJ</td>
+      <td>12.1</td>
+      <td>8.0</td>
+      <td>10.0</td>
+      <td><span class='cell good'>0.625</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>0.534</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>FARIED, KENNETH</td>
+      <td>15.3</td>
+      <td>7.8</td>
+      <td>7.0</td>
+      <td><span class='cell good'>0.608</span></td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>0.603</td>
+    </tr>
+    <tr>
+      <td>2026-02-05</td>
+      <td>GRIGONIS, MARIUS</td>
+      <td>10.2</td>
+      <td>5.0</td>
+      <td>3.0</td>
+      <td><span class='cell bad'>0.500</span></td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>0.100</td>
+    </tr>
+  </tbody>
+</table>
+      <h4>OLY</h4>
+      <table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>usage_proxy</th>
+      <th>pts</th>
+      <th>ts</th>
+      <th>ast</th>
+      <th>to</th>
+      <th>r5_ts</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-12</td>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.5</td>
+      <td>20.0</td>
+      <td>23.0</td>
+      <td><span class='cell good'>0.640</span></td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>0.621</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>16.8</td>
+      <td>17.0</td>
+      <td><span class='cell good'>0.618</span></td>
+      <td>0.0</td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td>0.602</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>FOURNIER, EVAN</td>
+      <td>22.5</td>
+      <td>15.9</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.605</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.651</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>WARD, TYSON</td>
+      <td>17.5</td>
+      <td>8.4</td>
+      <td>7.0</td>
+      <td><span class='cell bad'>0.470</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.494</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>MILUTINOV, NIKOLA</td>
+      <td>13.2</td>
+      <td>5.3</td>
+      <td>6.0</td>
+      <td><span class='cell good'>0.694</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.684</td>
+    </tr>
+    <tr>
+      <td>2026-01-22</td>
+      <td>PAPANIKOLAOU, KOSTAS</td>
+      <td>16.3</td>
+      <td>5.0</td>
+      <td>2.0</td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td>0.199</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>WALKUP, THOMAS</td>
+      <td>30.7</td>
+      <td>4.9</td>
+      <td>5.0</td>
+      <td><span class='cell good'>0.868</span></td>
+      <td>0.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td>0.676</td>
+    </tr>
+    <tr>
+      <td>2026-01-09</td>
+      <td>MORRIS, MONTE</td>
+      <td>10.5</td>
+      <td>4.3</td>
+      <td>1.0</td>
+      <td><span class='cell bad'>0.116</span></td>
+      <td>0.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td>0.224</td>
+    </tr>
+  </tbody>
+</table>
     </div>
   </section>
 
@@ -550,8 +1116,12 @@
       <th>player_name</th>
       <th>min</th>
       <th>usage_proxy</th>
+      <th>pts</th>
+      <th>to</th>
       <th>ts</th>
       <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>gog_to</th>
       <th>gog_usage_proxy</th>
       <th>gog_min</th>
       <th>FormScore</th>
@@ -565,91 +1135,119 @@
       <td>HERNANGOMEZ, JUANCHO</td>
       <td>37.0</td>
       <td>9.4</td>
-      <td>0.953</td>
-      <td>0.445</td>
-      <td>2.560</td>
-      <td>5.967</td>
-      <td>0.391</td>
+      <td>18.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.953</span></td>
+      <td><span class='cell good'>0.44</span></td>
+      <td><span class='cell good'>11.00</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>2.56</td>
+      <td>5.97</td>
+      <td>0.39</td>
       <td>0.670</td>
-      <td>7.664</td>
+      <td>7.7</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SLOUKAS, KOSTAS</td>
       <td>19.2</td>
       <td>9.4</td>
-      <td>0.530</td>
-      <td>0.219</td>
-      <td>2.000</td>
-      <td>3.417</td>
-      <td>0.224</td>
+      <td>10.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell ok'>0.530</span></td>
+      <td><span class='cell good'>0.22</span></td>
+      <td><span class='cell good'>6.00</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>2.00</td>
+      <td>3.42</td>
+      <td>0.22</td>
       <td>0.511</td>
-      <td>11.408</td>
+      <td>11.4</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>OSMAN, CEDI</td>
       <td>32.2</td>
       <td>9.9</td>
-      <td>0.450</td>
-      <td>0.186</td>
-      <td>-1.560</td>
-      <td>7.000</td>
-      <td>0.142</td>
+      <td>8.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>0.450</span></td>
+      <td><span class='cell good'>0.19</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>-1.56</td>
+      <td>7.00</td>
+      <td>0.14</td>
       <td>0.392</td>
-      <td>10.168</td>
+      <td>10.2</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>FARIED, KENNETH</td>
       <td>15.3</td>
       <td>7.8</td>
-      <td>0.608</td>
-      <td>0.157</td>
-      <td>2.320</td>
-      <td>-1.967</td>
-      <td>0.126</td>
+      <td>7.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.608</span></td>
+      <td><span class='cell good'>0.16</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>2.32</td>
+      <td>-1.97</td>
+      <td>0.13</td>
       <td>0.603</td>
-      <td>4.816</td>
+      <td>4.8</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>NUNN, KENDRICK</td>
       <td>35.0</td>
       <td>20.6</td>
-      <td>0.511</td>
-      <td>-0.039</td>
-      <td>-0.440</td>
-      <td>2.100</td>
-      <td>-0.004</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>4.0</span></td>
+      <td><span class='cell bad'>0.511</span></td>
+      <td><span class='cell ok'>-0.04</span></td>
+      <td><span class='cell ok'>-4.00</span></td>
+      <td><span class='cell bad'>2.00</span></td>
+      <td>-0.44</td>
+      <td>2.10</td>
+      <td>-0.00</td>
       <td>0.605</td>
-      <td>19.312</td>
+      <td>19.3</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>GRANT, JERIAN</td>
       <td>27.4</td>
       <td>9.0</td>
-      <td>0.250</td>
-      <td>-0.150</td>
-      <td>1.000</td>
-      <td>1.883</td>
-      <td>-0.015</td>
+      <td>4.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>0.250</span></td>
+      <td><span class='cell bad'>-0.15</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell good'>-2.00</span></td>
+      <td>1.00</td>
+      <td>1.88</td>
+      <td>-0.02</td>
       <td>0.536</td>
-      <td>11.928</td>
+      <td>11.9</td>
     </tr>
     <tr>
       <td>2026-02-13</td>
       <td>SHORTS, TJ</td>
       <td>12.1</td>
       <td>8.0</td>
-      <td>0.625</td>
-      <td>-0.114</td>
-      <td>-9.200</td>
-      <td>-14.000</td>
-      <td>-0.557</td>
+      <td>10.0</td>
+      <td><span class='cell good'>0.0</span></td>
+      <td><span class='cell good'>0.625</span></td>
+      <td><span class='cell bad'>-0.11</span></td>
+      <td><span class='cell bad'>-11.00</span></td>
+      <td><span class='cell good'>-3.00</span></td>
+      <td>-9.20</td>
+      <td>-14.00</td>
+      <td>-0.56</td>
       <td>0.534</td>
-      <td>11.680</td>
+      <td>11.7</td>
     </tr>
   </tbody>
 </table>
@@ -661,8 +1259,12 @@
       <th>player_name</th>
       <th>min</th>
       <th>usage_proxy</th>
+      <th>pts</th>
+      <th>to</th>
       <th>ts</th>
       <th>gog_ts</th>
+      <th>gog_pts</th>
+      <th>gog_to</th>
       <th>gog_usage_proxy</th>
       <th>gog_min</th>
       <th>FormScore</th>
@@ -676,52 +1278,68 @@
       <td>VEZENKOV, SASHA</td>
       <td>32.5</td>
       <td>20.0</td>
-      <td>0.640</td>
-      <td>-0.143</td>
-      <td>5.200</td>
-      <td>8.133</td>
-      <td>0.261</td>
+      <td>23.0</td>
+      <td><span class='cell ok'>2.0</span></td>
+      <td><span class='cell good'>0.640</span></td>
+      <td><span class='cell bad'>-0.14</span></td>
+      <td><span class='cell ok'>3.00</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td>5.20</td>
+      <td>8.13</td>
+      <td>0.26</td>
       <td>0.621</td>
-      <td>16.576</td>
+      <td>16.6</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>FOURNIER, EVAN</td>
       <td>22.5</td>
       <td>15.9</td>
-      <td>0.605</td>
-      <td>-0.495</td>
-      <td>10.880</td>
-      <td>8.000</td>
-      <td>0.238</td>
+      <td>18.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell good'>0.605</span></td>
+      <td><span class='cell bad'>-0.50</span></td>
+      <td><span class='cell good'>7.00</span></td>
+      <td><span class='cell bad'>1.00</span></td>
+      <td>10.88</td>
+      <td>8.00</td>
+      <td>0.24</td>
       <td>0.651</td>
-      <td>11.216</td>
+      <td>11.2</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>DORSEY, TYLER</td>
       <td>24.3</td>
       <td>16.8</td>
-      <td>0.618</td>
-      <td>-0.177</td>
-      <td>5.440</td>
-      <td>4.300</td>
-      <td>0.161</td>
+      <td>17.0</td>
+      <td><span class='cell bad'>3.0</span></td>
+      <td><span class='cell good'>0.618</span></td>
+      <td><span class='cell bad'>-0.18</span></td>
+      <td><span class='cell ok'>-1.00</span></td>
+      <td><span class='cell bad'>3.00</span></td>
+      <td>5.44</td>
+      <td>4.30</td>
+      <td>0.16</td>
       <td>0.602</td>
-      <td>16.384</td>
+      <td>16.4</td>
     </tr>
     <tr>
       <td>2026-02-12</td>
       <td>WARD, TYSON</td>
       <td>17.5</td>
       <td>8.4</td>
-      <td>0.470</td>
-      <td>0.033</td>
-      <td>-1.560</td>
-      <td>-8.600</td>
-      <td>-0.227</td>
+      <td>7.0</td>
+      <td><span class='cell good'>1.0</span></td>
+      <td><span class='cell bad'>0.470</span></td>
+      <td><span class='cell ok'>0.03</span></td>
+      <td><span class='cell ok'>0.00</span></td>
+      <td><span class='cell good'>-1.00</span></td>
+      <td>-1.56</td>
+      <td>-8.60</td>
+      <td>-0.23</td>
       <td>0.494</td>
-      <td>8.680</td>
+      <td>8.7</td>
     </tr>
   </tbody>
 </table>
@@ -731,13 +1349,48 @@
   <section id="definitions" class="section">
     <h2>Footnotes / Definitions</h2>
     <ul>
-      <li><strong>TS (True Shooting):</strong> PTS / (2*(FGA + 0.44*FTA))</li>
-      <li><strong>eFG:</strong> (FGM + 0.5*3PM) / FGA</li>
-      <li><strong>usage_proxy:</strong> FGA + 0.44*FTA + TO</li>
-      <li><strong>GoG (game-over-game):</strong> current stat minus previous game stat for same player_id</li>
-      <li><strong>r5_*:</strong> rolling 5-game mean for that stat</li>
-      <li><strong>min conversion:</strong> MM:SS converted to minutes as float</li>
+      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code></li>
+      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code></li>
+      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code></li>
+      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code></li>
+      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code></li>
+      <li><strong>min conversion:</strong> <code>MM:SS → minutes_float</code></li>
     </ul>
   </section>
+
+  <script>
+    (function () {
+      function parseCell(text) {
+        const cleaned = text.trim().replace(/,/g, '');
+        const num = Number(cleaned);
+        return Number.isNaN(num) ? cleaned.toLowerCase() : num;
+      }
+
+      document.querySelectorAll('table.report-table').forEach((table) => {
+        const headers = table.querySelectorAll('thead th');
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        headers.forEach((th, idx) => {
+          th.classList.add('sortable');
+          th.dataset.order = 'desc';
+          th.addEventListener('click', () => {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const asc = th.dataset.order === 'asc';
+            rows.sort((a, b) => {
+              const va = parseCell(a.children[idx].innerText);
+              const vb = parseCell(b.children[idx].innerText);
+              if (va < vb) return asc ? -1 : 1;
+              if (va > vb) return asc ? 1 : -1;
+              return 0;
+            });
+            rows.forEach((r) => tbody.appendChild(r));
+            headers.forEach((h) => (h.dataset.order = 'desc'));
+            th.dataset.order = asc ? 'desc' : 'asc';
+          });
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
