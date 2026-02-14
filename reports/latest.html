@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EuroLeague PAN/OLY Player Report — E2025</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 24px; color: #1f2937; }
+    h1, h2, h3, h4 { margin: 0.4rem 0; }
+    a { color: #0f4c81; }
+    .muted { color: #6b7280; }
+    .summary, .section { margin-top: 20px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }
+    .value { font-size: 1.3rem; font-weight: 700; }
+    .note { display: inline-block; background: #eef6ff; border: 1px solid #c9def8; color: #184e87; border-radius: 999px; padding: 4px 10px; font-size: 0.85rem; margin: 8px 0; }
+    .warning { background: #fff4e5; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-top: 16px; font-weight: 600; color: #92400e; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.92rem; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; }
+    thead th { position: sticky; top: 0; background: #f8fafc; z-index: 1; }
+    .table-wrap { overflow-x: auto; }
+    #definitions ul { margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <h1>EuroLeague PAN/OLY Player Report — Season E2025 — Generated 2026-02-14 20:35:55 UTC</h1>
+  <p class="muted">Jump to <a href="#definitions">definitions</a>.</p>
+
+  
+
+  <section class="summary">
+    <h2>Data freshness</h2>
+    <div class="summary-grid">
+      <div class="card"><div>Total games parsed</div><div class="value">54</div></div>
+      <div class="card"><div>PAN/OLY games found</div><div class="value">54</div></div>
+      <div class="card"><div>player_game rows</div><div class="value">1287</div></div>
+      <div class="card"><div>player_gog rows</div><div class="value">1287</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Top movers — Points (GoG)</h2>
+    <div class="table-wrap">
+      <h4>PAN</h4><p class='note'>Filter: latest game per player, min ≥ 5.</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>pts</th>
+      <th>gog_pts</th>
+      <th>r5_pts</th>
+      <th>ts</th>
+      <th>r5_ts</th>
+      <th>usage_proxy</th>
+      <th>r5_usage_proxy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-13</td>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.05</td>
+      <td>18</td>
+      <td>11</td>
+      <td>9.4</td>
+      <td>0.953</td>
+      <td>0.67</td>
+      <td>9.44</td>
+      <td>7.664</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.167</td>
+      <td>10</td>
+      <td>6</td>
+      <td>12.4</td>
+      <td>0.53</td>
+      <td>0.511</td>
+      <td>9.44</td>
+      <td>11.408</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>ROGKAVOPOULOS, NIKOLAOS</td>
+      <td>10.117</td>
+      <td>5</td>
+      <td>5</td>
+      <td>4.6</td>
+      <td>1.25</td>
+      <td>0.467</td>
+      <td>2</td>
+      <td>4.552</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>OSMAN, CEDI</td>
+      <td>32.25</td>
+      <td>8</td>
+      <td>3</td>
+      <td>7.2</td>
+      <td>0.45</td>
+      <td>0.392</td>
+      <td>9.88</td>
+      <td>10.168</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>FARIED, KENNETH</td>
+      <td>15.283</td>
+      <td>7</td>
+      <td>3</td>
+      <td>4.2</td>
+      <td>0.608</td>
+      <td>0.603</td>
+      <td>7.76</td>
+      <td>4.816</td>
+    </tr>
+    <tr>
+      <td>2026-02-05</td>
+      <td>GRIGONIS, MARIUS</td>
+      <td>10.25</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0.6</td>
+      <td>0.5</td>
+      <td>0.1</td>
+      <td>5</td>
+      <td>1.2</td>
+    </tr>
+    <tr>
+      <td>2026-02-05</td>
+      <td>TOLIOPOULOS, VASSILIS</td>
+      <td>11.317</td>
+      <td>3</td>
+      <td>3</td>
+      <td>5.8</td>
+      <td>0.5</td>
+      <td>0.325</td>
+      <td>4</td>
+      <td>5.928</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>GRANT, JERIAN</td>
+      <td>27.4</td>
+      <td>4</td>
+      <td>0</td>
+      <td>11.2</td>
+      <td>0.25</td>
+      <td>0.536</td>
+      <td>9</td>
+      <td>11.928</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>HOLMES, RICHAUN</td>
+      <td>9.033</td>
+      <td>4</td>
+      <td>0</td>
+      <td>6.6</td>
+      <td>0.694</td>
+      <td>0.575</td>
+      <td>2.88</td>
+      <td>6.544</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>NUNN, KENDRICK</td>
+      <td>34.95</td>
+      <td>17</td>
+      <td>-4</td>
+      <td>20.2</td>
+      <td>0.511</td>
+      <td>0.605</td>
+      <td>20.64</td>
+      <td>19.312</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SHORTS, TJ</td>
+      <td>12.067</td>
+      <td>10</td>
+      <td>-11</td>
+      <td>11</td>
+      <td>0.625</td>
+      <td>0.534</td>
+      <td>8</td>
+      <td>11.68</td>
+    </tr>
+  </tbody>
+</table>
+      <h4>OLY</h4><p class='note'>Filter: latest game per player, min ≥ 5.</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>pts</th>
+      <th>gog_pts</th>
+      <th>r5_pts</th>
+      <th>ts</th>
+      <th>r5_ts</th>
+      <th>usage_proxy</th>
+      <th>r5_usage_proxy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-12</td>
+      <td>FOURNIER, EVAN</td>
+      <td>22.533</td>
+      <td>18</td>
+      <td>7</td>
+      <td>12.4</td>
+      <td>0.605</td>
+      <td>0.651</td>
+      <td>15.88</td>
+      <td>11.216</td>
+    </tr>
+    <tr>
+      <td>2026-02-06</td>
+      <td>JOSEPH, CORY</td>
+      <td>14.133</td>
+      <td>8</td>
+      <td>5</td>
+      <td>4.333</td>
+      <td>1</td>
+      <td>0.577</td>
+      <td>4</td>
+      <td>5.547</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.517</td>
+      <td>23</td>
+      <td>3</td>
+      <td>18.8</td>
+      <td>0.64</td>
+      <td>0.621</td>
+      <td>19.96</td>
+      <td>16.576</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>NTILIKINA, FRANK</td>
+      <td>10.55</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2.8</td>
+      <td>1.5</td>
+      <td>0.67</td>
+      <td>1</td>
+      <td>3.2</td>
+    </tr>
+    <tr>
+      <td>2026-01-22</td>
+      <td>PAPANIKOLAOU, KOSTAS</td>
+      <td>16.317</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>0.25</td>
+      <td>0.199</td>
+      <td>5</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <td>2026-01-06</td>
+      <td>ANTETOKOUNMPO, KOSTAS</td>
+      <td>6.467</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0.4</td>
+      <td>0.5</td>
+      <td>0.1</td>
+      <td>2</td>
+      <td>0.4</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>WARD, TYSON</td>
+      <td>17.467</td>
+      <td>7</td>
+      <td>0</td>
+      <td>7.2</td>
+      <td>0.47</td>
+      <td>0.494</td>
+      <td>8.44</td>
+      <td>8.68</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>WALKUP, THOMAS</td>
+      <td>30.683</td>
+      <td>5</td>
+      <td>0</td>
+      <td>5</td>
+      <td>0.868</td>
+      <td>0.676</td>
+      <td>4.88</td>
+      <td>5.976</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>17</td>
+      <td>-1</td>
+      <td>16.2</td>
+      <td>0.618</td>
+      <td>0.602</td>
+      <td>16.76</td>
+      <td>16.384</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>MILUTINOV, NIKOLA</td>
+      <td>13.15</td>
+      <td>6</td>
+      <td>-1</td>
+      <td>9.4</td>
+      <td>0.694</td>
+      <td>0.684</td>
+      <td>5.32</td>
+      <td>7.648</td>
+    </tr>
+    <tr>
+      <td>2026-01-09</td>
+      <td>MORRIS, MONTE</td>
+      <td>10.5</td>
+      <td>1</td>
+      <td>-1</td>
+      <td>2.75</td>
+      <td>0.116</td>
+      <td>0.224</td>
+      <td>4.32</td>
+      <td>5.57</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>HALL, DONTA</td>
+      <td>6.067</td>
+      <td>2</td>
+      <td>-3</td>
+      <td>3.4</td>
+      <td>1</td>
+      <td>0.519</td>
+      <td>2</td>
+      <td>2.552</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>MCKISSIC, SHAQUIELLE</td>
+      <td>14.467</td>
+      <td>5</td>
+      <td>-5</td>
+      <td>5</td>
+      <td>0.868</td>
+      <td>0.523</td>
+      <td>3.88</td>
+      <td>4.744</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>JONES, TYRIQUE</td>
+      <td>20.783</td>
+      <td>4</td>
+      <td>-6</td>
+      <td>8.8</td>
+      <td>1.064</td>
+      <td>0.759</td>
+      <td>3.88</td>
+      <td>6.776</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>PETERS, ALEC</td>
+      <td>7.483</td>
+      <td>2</td>
+      <td>-6</td>
+      <td>4.8</td>
+      <td>0.25</td>
+      <td>0.64</td>
+      <td>4</td>
+      <td>3.904</td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Top movers — Efficiency (GoG TS)</h2>
+    <div class="table-wrap">
+      <h4>PAN</h4><p class='note'>Filter: latest game per player, min ≥ 10 and usage_proxy ≥ 6. Sorted by gog_ts desc.</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>ts</th>
+      <th>gog_ts</th>
+      <th>r5_ts</th>
+      <th>usage_proxy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-13</td>
+      <td>HERNANGOMEZ, JUANCHO</td>
+      <td>37.05</td>
+      <td>0.953</td>
+      <td>0.445</td>
+      <td>0.67</td>
+      <td>9.44</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SLOUKAS, KOSTAS</td>
+      <td>19.167</td>
+      <td>0.53</td>
+      <td>0.219</td>
+      <td>0.511</td>
+      <td>9.44</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>OSMAN, CEDI</td>
+      <td>32.25</td>
+      <td>0.45</td>
+      <td>0.186</td>
+      <td>0.392</td>
+      <td>9.88</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>FARIED, KENNETH</td>
+      <td>15.283</td>
+      <td>0.608</td>
+      <td>0.157</td>
+      <td>0.603</td>
+      <td>7.76</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>NUNN, KENDRICK</td>
+      <td>34.95</td>
+      <td>0.511</td>
+      <td>-0.039</td>
+      <td>0.605</td>
+      <td>20.64</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>SHORTS, TJ</td>
+      <td>12.067</td>
+      <td>0.625</td>
+      <td>-0.114</td>
+      <td>0.534</td>
+      <td>8</td>
+    </tr>
+    <tr>
+      <td>2026-02-13</td>
+      <td>GRANT, JERIAN</td>
+      <td>27.4</td>
+      <td>0.25</td>
+      <td>-0.15</td>
+      <td>0.536</td>
+      <td>9</td>
+    </tr>
+  </tbody>
+</table>
+      <h4>OLY</h4><p class='note'>Filter: latest game per player, min ≥ 10 and usage_proxy ≥ 6. Sorted by gog_ts desc.</p><table class="dataframe report-table">
+  <thead>
+    <tr style="text-align: right;">
+      <th>date</th>
+      <th>player_name</th>
+      <th>min</th>
+      <th>ts</th>
+      <th>gog_ts</th>
+      <th>r5_ts</th>
+      <th>usage_proxy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2026-02-12</td>
+      <td>WARD, TYSON</td>
+      <td>17.467</td>
+      <td>0.47</td>
+      <td>0.033</td>
+      <td>0.494</td>
+      <td>8.44</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>VEZENKOV, SASHA</td>
+      <td>32.517</td>
+      <td>0.64</td>
+      <td>-0.143</td>
+      <td>0.621</td>
+      <td>19.96</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>DORSEY, TYLER</td>
+      <td>24.3</td>
+      <td>0.618</td>
+      <td>-0.177</td>
+      <td>0.602</td>
+      <td>16.76</td>
+    </tr>
+    <tr>
+      <td>2026-02-12</td>
+      <td>FOURNIER, EVAN</td>
+      <td>22.533</td>
+      <td>0.605</td>
+      <td>-0.495</td>
+      <td>0.651</td>
+      <td>15.88</td>
+    </tr>
+  </tbody>
+</table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>High usage, low efficiency (watchlist)</h2>
+    <div class="table-wrap">
+      <h4>PAN</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>ts</th><th>pts</th><th>ast</th><th>to</th></tr></thead><tbody><tr><td colspan='8'>No rows match filter.</td></tr></tbody></table>
+      <h4>OLY</h4><p class='note'>Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.</p><table><thead><tr><th>date</th><th>player_name</th><th>min</th><th>usage_proxy</th><th>ts</th><th>pts</th><th>ast</th><th>to</th></tr></thead><tbody><tr><td colspan='8'>No rows match filter.</td></tr></tbody></table>
+    </div>
+  </section>
+
+  <section id="definitions" class="section">
+    <h2>Footnotes / Definitions</h2>
+    <ul>
+      <li><strong>TS (True Shooting):</strong> PTS / (2*(FGA + 0.44*FTA))</li>
+      <li><strong>eFG:</strong> (FGM + 0.5*3PM) / FGA</li>
+      <li><strong>usage_proxy:</strong> FGA + 0.44*FTA + TO</li>
+      <li><strong>GoG (game-over-game):</strong> current stat minus previous game stat for same player_id</li>
+      <li><strong>r5_*:</strong> rolling 5-game mean for that stat</li>
+      <li><strong>min conversion:</strong> MM:SS converted to minutes as float</li>
+    </ul>
+  </section>
+</body>
+</html>
