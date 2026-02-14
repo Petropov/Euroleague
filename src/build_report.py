@@ -92,6 +92,51 @@ def _compute_top_usage(latest_df: pd.DataFrame, team_code: str) -> pd.DataFrame:
     return scoped.sort_values(["usage_proxy", "pts"], ascending=[False, False]).head(8)
 
 
+def _robust_norm(series: pd.Series) -> pd.Series:
+    denom = max(series.abs().max(), 1e-6)
+    return series / denom
+
+
+def _compute_stack_rankings(latest_df: pd.DataFrame, team_code: str) -> dict[str, pd.DataFrame]:
+    team_df = latest_df[(latest_df["team_code"] == team_code) & (latest_df["min"] >= 10)].copy()
+    if team_df.empty:
+        return {"impact": team_df, "trend": team_df, "risk": team_df}
+
+    ts_clipped = team_df["ts"].clip(0, 1)
+    score_cols = {
+        "impact": "ImpactNowScore",
+        "trend": "TrendScore",
+        "risk": "RiskScore",
+    }
+
+    team_df["ImpactNowScore"] = (
+        0.45 * _robust_norm(team_df["pts"])
+        + 0.35 * _robust_norm(ts_clipped - 0.55)
+        + 0.20 * _robust_norm(team_df["usage_proxy"])
+    )
+
+    team_df["TrendScore"] = (
+        0.40 * team_df["gog_ts"].clip(-0.5, 0.5)
+        + 0.30 * _robust_norm(team_df["gog_pts"])
+        + 0.20 * _robust_norm(team_df["gog_usage_proxy"])
+        + 0.10 * _robust_norm(team_df["r5_ts"] - 0.55)
+    )
+
+    usage_risk = (team_df["usage_proxy"] - 12).clip(lower=0)
+    ts_risk = (0.52 - ts_clipped).clip(lower=0)
+    to_risk = team_df["to"].clip(lower=0)
+    team_df["RiskScore"] = (
+        0.45 * _robust_norm(usage_risk)
+        + 0.35 * _robust_norm(ts_risk)
+        + 0.20 * _robust_norm(to_risk)
+    )
+
+    result = {}
+    for key, score_col in score_cols.items():
+        result[key] = team_df.sort_values([score_col, "pts"], ascending=[False, False]).head(8)
+    return result
+
+
 def _latest_team_summary(latest_df: pd.DataFrame, team_code: str) -> dict[str, str]:
     team_df = latest_df[latest_df["team_code"] == team_code].copy()
     if team_df.empty:
@@ -178,7 +223,11 @@ def _render_cell(value: object, col: str) -> str:
     return text
 
 
-def _format_table(df: pd.DataFrame, columns: Iterable[str]) -> str:
+def _format_table(
+    df: pd.DataFrame,
+    columns: Iterable[str],
+    score_badges: dict[str, str] | None = None,
+) -> str:
     cols = list(columns)
     if df.empty:
         header_cells = "".join(f"<th>{c}</th>" for c in cols)
@@ -195,7 +244,14 @@ def _format_table(df: pd.DataFrame, columns: Iterable[str]) -> str:
             "%Y-%m-%d"
         )
 
+    score_badges = score_badges or {}
     for col in render_df.columns:
+        if col in score_badges:
+            badge_class = score_badges[col]
+            render_df[col] = render_df[col].map(
+                lambda v, b=badge_class: "" if pd.isna(v) else f"<span class='badge {b}'>{v:.3f}</span>"
+            )
+            continue
         if pd.api.types.is_numeric_dtype(render_df[col]):
             render_df[col] = render_df[col].map(lambda v, c=col: _render_cell(v, c))
 
@@ -244,6 +300,8 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     oly_momentum = _compute_momentum_watch(latest, "OLY")
     pan_top_usage = _compute_top_usage(latest, "PAN")
     oly_top_usage = _compute_top_usage(latest, "OLY")
+    pan_stack = _compute_stack_rankings(latest, "PAN")
+    oly_stack = _compute_stack_rankings(latest, "OLY")
     pan_summary = _latest_team_summary(latest, "PAN")
     oly_summary = _latest_team_summary(latest, "OLY")
 
@@ -316,6 +374,17 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "r5_ts",
         "r5_usage_proxy",
     ]
+    stack_cols = [
+        "player_name",
+        "min",
+        "usage_proxy",
+        "pts",
+        "ts",
+        "to",
+        "gog_ts",
+        "gog_pts",
+        "r5_ts",
+    ]
 
     html = f"""<!doctype html>
 <html lang=\"en\">
@@ -340,9 +409,13 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     th.sortable {{ cursor: pointer; }}
     .table-wrap {{ overflow-x: auto; }}
     .cell {{ display: inline-block; padding: 2px 6px; border-radius: 4px; }}
+    .badge {{ padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }}
+    .badge.good {{ background: #e8f7ee; color: #065f46; }}
+    .badge.bad {{ background: #fde8e8; color: #991b1b; }}
     .good {{ background: #e8f7ee; color: #065f46; font-weight: 600; }}
     .bad  {{ background: #fde8e8; color: #991b1b; font-weight: 600; }}
     .ok   {{ background: #f3f4f6; color: #111827; }}
+    .tip {{ border-left: 4px solid #0f4c81; background: #eef6ff; padding: 10px 12px; border-radius: 6px; margin-top: 12px; }}
     #definitions ul {{ margin-top: 6px; line-height: 1.6; }}
     #definitions code {{ background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }}
   </style>
@@ -372,6 +445,53 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
           <li><strong>Watchlist (high usage, low TS):</strong> {oly_summary['watchlist']}</li>
         </ul>
       </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>What we measure &amp; why it matters</h2>
+    <p>We track more than box-score totals because production quality and role context usually explain future games better than single-game points. Efficiency metrics such as TS and eFG tell us whether scoring came from sustainable shot value (threes, free throws, and clean attempts) rather than volume alone.</p>
+    <p>Usage_proxy shows offensive responsibility. A player with high TS on very low usage may simply be finishing easy possessions, while a high-usage player with average TS can still be driving team offense. Reading efficiency together with usage helps separate true creators from low-volume outliers.</p>
+    <p>GoG deltas highlight short-term shocks from one game to the next, which is useful for spotting role changes, injury impacts, or matchup swings quickly. Rolling 5-game metrics (r5_*) smooth one-game noise to reveal underlying form and stabilize interpretation.</p>
+    <p>Turnovers and minutes complete the picture: turnovers end possessions, so rising TO under heavy usage is a warning sign; minutes reflect coach trust and rotation shifts, and sudden minute spikes often precede box-score jumps.</p>
+    <ul>
+      <li><strong>Efficiency (TS, eFG):</strong> shot quality converted into points; better sustainability signal than raw points.</li>
+      <li><strong>usage_proxy:</strong> offensive load proxy that clarifies role and responsibility.</li>
+      <li><strong>GoG deltas:</strong> immediate change detector for form, role, and availability shifts.</li>
+      <li><strong>r5_* rolling:</strong> trend lens that reduces game-level randomness.</li>
+      <li><strong>Turnovers (TO, gog_to):</strong> possession killers, especially concerning when paired with high usage.</li>
+      <li><strong>Minutes (min, gog_min):</strong> rotation confidence indicator; spikes can foreshadow bigger stat lines.</li>
+    </ul>
+    <div class="tip">
+      <strong>How to read this report:</strong> Start with <em>Stack-ranked Insights</em>, then verify context in <em>Top Usage</em>, then confirm direction in <em>Momentum Watch</em>. Treat TS above 1.0 as a likely small-sample/outlier artifact from limited attempts or free-throw weighting.
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Stack-ranked Insights (per team)</h2>
+    <p class='note'>Scope: latest game per player, filtered to min ≥ 10. Top 8 per list for PAN and OLY.</p>
+    <div class="table-wrap">
+      <h3>PAN</h3>
+      <h4>Impact Now</h4>
+      {_format_table(pan_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
+      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
+      <h4>Trend</h4>
+      {_format_table(pan_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
+      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
+      <h4>Risk</h4>
+      {_format_table(pan_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
+      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
+
+      <h3>OLY</h3>
+      <h4>Impact Now</h4>
+      {_format_table(oly_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
+      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
+      <h4>Trend</h4>
+      {_format_table(oly_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
+      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
+      <h4>Risk</h4>
+      {_format_table(oly_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
+      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
     </div>
   </section>
 
@@ -439,11 +559,11 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
   <section id=\"definitions\" class=\"section\">
     <h2>Footnotes / Definitions</h2>
     <ul>
-      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code></li>
-      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code></li>
-      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code></li>
-      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code></li>
-      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code></li>
+      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code> — scoring efficiency adjusted for 3s and free throws; best single-number scorer efficiency proxy.</li>
+      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code> — shooting value per attempt, rewarding 3-point shot value above 2s.</li>
+      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code> — approximate possessions a player consumed; proxy for offensive load.</li>
+      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code> — detects sudden changes game-to-game (role, matchup, injury, form).</li>
+      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code> — reduces randomness and is usually better for reading true form.</li>
       <li><strong>min conversion:</strong> <code>MM:SS → minutes_float</code></li>
     </ul>
   </section>
