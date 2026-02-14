@@ -10,6 +10,9 @@ on:
         required: false
         default: "E2025"
 
+permissions:
+  contents: write
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
@@ -34,14 +37,26 @@ jobs:
           SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
           python -m src.pipeline --season "$SEASON"
 
+      - name: Smoke check parsed results
+        run: |
+          SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
+          python - <<'PY'
+          import pandas as pd
+          from src.config import CURATED_DIR, TEAMS
+
+          games = pd.read_csv(CURATED_DIR / "games.csv")
+          print("First 3 parsed gamecodes:", games["gamecode_full"].head(3).tolist())
+          pan_oly = games[
+              games["home_team_code"].isin(TEAMS) | games["away_team_code"].isin(TEAMS)
+          ]
+          print("PAN/OLY game count:", len(pan_oly))
+          PY
+
       - name: Commit curated updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/curated
-          if [ -f logs/pipeline.log ]; then
-            git add -f logs/pipeline.log
-          fi
           if git diff --cached --quiet; then
             echo "No curated changes to commit"
             exit 0

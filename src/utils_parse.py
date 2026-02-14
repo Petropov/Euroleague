@@ -50,8 +50,27 @@ def _iter_game_elements(root: ET.Element) -> Iterable[ET.Element]:
     for elem in root.iter():
         tag = elem.tag.lower().split("}")[-1]
         if tag in {"game", "g", "match"}:
-            if elem.attrib:
-                yield elem
+            yield elem
+
+
+def _flatten_element_text(elem: ET.Element) -> dict[str, str]:
+    flattened: dict[str, str] = {}
+    for child in elem.iter():
+        child_tag = child.tag.lower().split("}")[-1]
+        if child_tag in {"game", "g", "match"}:
+            continue
+        child_text = safe_text(child.text)
+        if child_text and child_tag not in flattened:
+            flattened[child_tag] = child_text
+    return flattened
+
+
+def _pick_field(attrs: dict[str, str], fields: dict[str, str], names: tuple[str, ...]) -> str:
+    for name in names:
+        value = attrs.get(name) or fields.get(name)
+        if value:
+            return value
+    return ""
 
 
 def parse_results_xml(xml_text: str) -> list[dict]:
@@ -60,11 +79,9 @@ def parse_results_xml(xml_text: str) -> list[dict]:
 
     for elem in _iter_game_elements(root):
         attrs = {k.lower(): v for k, v in elem.attrib.items()}
+        fields = _flatten_element_text(elem)
         gamecode_full = (
-            attrs.get("gamecode")
-            or attrs.get("code")
-            or attrs.get("id")
-            or attrs.get("game_code")
+            _pick_field(attrs, fields, ("gamecode", "code", "id", "game_code", "gamecodex"))
         )
         if not gamecode_full:
             continue
@@ -73,12 +90,21 @@ def parse_results_xml(xml_text: str) -> list[dict]:
             {
                 "gamecode_full": gamecode_full,
                 "gamecode_num": extract_gamecode_num(gamecode_full),
-                "date": attrs.get("date") or attrs.get("datetime") or attrs.get("gamedate") or attrs.get("time"),
-                "round": attrs.get("round") or attrs.get("phase") or attrs.get("group") or attrs.get("groupname"),
-                "home_team_code": (attrs.get("hometeamcode") or attrs.get("homecode") or attrs.get("home_team") or "").upper(),
-                "away_team_code": (attrs.get("awayteamcode") or attrs.get("awaycode") or attrs.get("away_team") or "").upper(),
-                "home_score": safe_int(attrs.get("homescore") or attrs.get("hscore"), default=None),
-                "away_score": safe_int(attrs.get("awayscore") or attrs.get("ascore"), default=None),
+                "date": _pick_field(attrs, fields, ("date", "datetime", "gamedate", "time", "utcdate")),
+                "group": _pick_field(attrs, fields, ("group", "groupname", "phase")),
+                "round": _pick_field(attrs, fields, ("round", "roundname", "matchday", "gameday")),
+                "home_team_code": _pick_field(
+                    attrs,
+                    fields,
+                    ("hometeamcode", "homecode", "home_team", "hcode", "localcode"),
+                ).upper(),
+                "away_team_code": _pick_field(
+                    attrs,
+                    fields,
+                    ("awayteamcode", "awaycode", "away_team", "acode", "roadcode"),
+                ).upper(),
+                "home_score": safe_int(_pick_field(attrs, fields, ("homescore", "hscore", "localscore")), default=None),
+                "away_score": safe_int(_pick_field(attrs, fields, ("awayscore", "ascore", "roadscore")), default=None),
             }
         )
     return games
