@@ -4,68 +4,27 @@ from __future__ import annotations
 
 import argparse
 import time
-from collections.abc import Iterable
 
 import pandas as pd
 import requests
 
-from src.config import BOXSCORE_ENDPOINT, CURATED_DIR, DEFAULT_SEASON_CODE, LOG_DIR, RAW_DIR, REQUEST_DELAY_SECONDS, TEAMS
+from src.config import BOXSCORE_ENDPOINT, CURATED_DIR, DEFAULT_SEASON_CODE, LOG_DIR, RAW_DIR, REQUEST_DELAY_SECONDS
 from src.fetch_results import run as run_fetch_results
 from src.utils_http import build_session, get_json, get_logger, read_json_cache, write_json_cache
 from src.utils_parse import safe_float, safe_int, safe_text, slugify
 
 
-TEAM_CODE_KEYS = ["teamcode", "code", "teamCode", "shortName", "tricode"]
-PLAYER_LIST_KEYS = ["players", "PlayerStats", "playerStats", "roster", "athletes"]
-
-STAT_KEYS = {
-    "min": ["min", "minutes", "timePlayed", "MIN"],
-    "pts": ["pts", "points", "PTS"],
-    "reb": ["reb", "totReb", "rebounds", "TR"],
-    "ast": ["ast", "assists", "AS"],
-    "stl": ["stl", "steals", "ST"],
-    "blk": ["blk", "blocks", "BK"],
-    "to": ["to", "turnovers", "TO"],
-    "pf": ["pf", "fouls", "PF"],
-    "fgm": ["fgm", "fgMade", "FGM"],
-    "fga": ["fga", "fgAttempted", "FGA"],
-    "tpm": ["tpm", "tpMade", "3PM", "fg3Made"],
-    "tpa": ["tpa", "tpAttempted", "3PA", "fg3Attempted"],
-    "ftm": ["ftm", "ftMade", "FTM"],
-    "fta": ["fta", "ftAttempted", "FTA"],
-}
+STAT_KEYS = ["min", "pts", "reb", "ast", "stl", "blk", "to", "pf", "fgm", "fga", "tpm", "tpa", "ftm", "fta"]
 
 
-def pick_value(payload: dict, aliases: list[str], default=None):
-    for alias in aliases:
-        if alias in payload:
-            return payload[alias]
-    lowered = {str(k).lower(): v for k, v in payload.items()}
-    for alias in aliases:
-        if alias.lower() in lowered:
-            return lowered[alias.lower()]
-    return default
-
-
-def iter_team_nodes(obj) -> Iterable[dict]:
-    if isinstance(obj, dict):
-        code = pick_value(obj, TEAM_CODE_KEYS)
-        if isinstance(code, str) and code.upper() in TEAMS:
-            yield obj
-        for val in obj.values():
-            yield from iter_team_nodes(val)
-    elif isinstance(obj, list):
-        for item in obj:
-            yield from iter_team_nodes(item)
-
-
-def iter_player_nodes(team_node: dict) -> Iterable[dict]:
-    for key in PLAYER_LIST_KEYS:
-        candidate = team_node.get(key)
-        if isinstance(candidate, list):
-            for player in candidate:
-                if isinstance(player, dict):
-                    yield player
+def parse_minutes(value) -> float:
+    text = safe_text(value)
+    if not text:
+        return 0.0
+    if ":" not in text:
+        return safe_float(text, default=0.0)
+    mins, secs = text.split(":", maxsplit=1)
+    return safe_float(mins, default=0.0) + safe_float(secs, default=0.0) / 60.0
 
 
 def resolve_opponent(game_row: pd.Series, team_code: str) -> tuple[str, str]:
@@ -78,22 +37,46 @@ def parse_player_rows(game_row: pd.Series, payload: dict, season_code: str, logg
     rows: list[dict] = []
     seen = set()
 
-    for team_node in iter_team_nodes(payload):
-        team_code = safe_text(pick_value(team_node, TEAM_CODE_KEYS)).upper()
-        if team_code not in TEAMS:
+    statblocks = payload.get("Stats") if isinstance(payload, dict) else None
+    if not isinstance(statblocks, list):
+        logger.warning("Boxscore payload missing Stats for game %s", game_row["gamecode_full"])
+        return rows
+
+    home_code = safe_text(game_row["home_team_code"]).upper()
+    away_code = safe_text(game_row["away_team_code"]).upper()
+
+    for team_node in statblocks:
+        if not isinstance(team_node, dict):
             continue
-        opponent_code, home_away = resolve_opponent(game_row, team_code)
-        for player in iter_player_nodes(team_node):
-            player_name = safe_text(
-                pick_value(
-                    player,
-                    ["player", "name", "fullname", "fullName", "PLAYER", "personName"],
-                    default="Unknown",
+
+        block_team_code = safe_text(team_node.get("Team") or team_node.get("team") or team_node.get("Code")).upper()
+        players = team_node.get("PlayersStats")
+        if not isinstance(players, list):
+            continue
+
+        for player in players:
+            if not isinstance(player, dict):
+                continue
+
+            team_code = safe_text(player.get("Team") or block_team_code).upper()
+            if team_code not in {home_code, away_code}:
+                continue
+
+            opponent_code, home_away = resolve_opponent(game_row, team_code)
+            player_name = safe_text(player.get("Player"), default="Unknown")
+            player_id = safe_text(player.get("Player_ID")) or slugify(player_name)
+
+            fgm2 = safe_float(player.get("FieldGoalsMade2"), default=0.0)
+            fga2 = safe_float(player.get("FieldGoalsAttempted2"), default=0.0)
+            tpm = safe_float(player.get("FieldGoalsMade3"), default=0.0)
+            tpa = safe_float(player.get("FieldGoalsAttempted3"), default=0.0)
+            ftm = safe_float(player.get("FreeThrowsMade"), default=0.0)
+            fta = safe_float(player.get("FreeThrowsAttempted"), default=0.0)
+            reb = safe_float(player.get("ReboundsTotal"), default=None)
+            if reb is None:
+                reb = safe_float(player.get("ReboundsOffensive"), default=0.0) + safe_float(
+                    player.get("ReboundsDefensive"), default=0.0
                 )
-            )
-            player_id = safe_text(pick_value(player, ["playercode", "playerId", "id", "code"]))
-            if not player_id:
-                player_id = f"{slugify(player_name)}_{team_code.lower()}_{season_code.lower()}"
 
             row = {
                 "season_code": season_code,
@@ -104,15 +87,44 @@ def parse_player_rows(game_row: pd.Series, payload: dict, season_code: str, logg
                 "home_away": home_away,
                 "player_id": player_id,
                 "player_name": player_name,
+                "min": parse_minutes(player.get("Minutes")),
+                "pts": safe_float(player.get("Points"), default=0.0),
+                "ast": safe_float(player.get("Assists"), default=0.0),
+                "reb": safe_float(reb, default=0.0),
+                "stl": safe_float(player.get("Steals"), default=0.0),
+                "blk": safe_float(player.get("BlocksFavour"), default=0.0),
+                "to": safe_float(player.get("Turnovers"), default=0.0),
+                "pf": safe_float(player.get("FoulsCommited"), default=0.0),
+                "fgm": fgm2 + tpm,
+                "fga": fga2 + tpa,
+                "tpm": tpm,
+                "tpa": tpa,
+                "ftm": ftm,
+                "fta": fta,
             }
-            for stat, aliases in STAT_KEYS.items():
-                value = pick_value(player, aliases, default=0)
-                row[stat] = safe_float(value, default=0.0)
             key = (row["season_code"], row["gamecode_num"], row["team_code"], row["player_id"])
             if key not in seen:
                 rows.append(row)
                 seen.add(key)
 
+    has_playersstats = any(
+        isinstance(block, dict) and isinstance(block.get("PlayersStats"), list) and block.get("PlayersStats")
+        for block in statblocks
+    )
+    if has_playersstats and not rows:
+        seen_keys = sorted(
+            {
+                key
+                for block in statblocks
+                if isinstance(block, dict)
+                for player in block.get("PlayersStats", [])
+                if isinstance(player, dict)
+                for key in player.keys()
+            }
+        )
+        raise RuntimeError(
+            f"Boxscore parser produced 0 rows for {game_row['gamecode_full']} despite PlayersStats. Keys: {seen_keys}"
+        )
     if not rows:
         logger.warning("No player rows parsed for game %s", game_row["gamecode_full"])
     return rows
@@ -168,7 +180,7 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
 
     player_df = pd.DataFrame(rows)
     if not player_df.empty:
-        for col in [*STAT_KEYS.keys()]:
+        for col in STAT_KEYS:
             player_df[col] = pd.to_numeric(player_df[col], errors="coerce").fillna(0.0)
         denom = 2 * (player_df["fga"] + 0.44 * player_df["fta"])
         player_df["ts"] = (player_df["pts"] / denom).where(denom > 0, 0.0)

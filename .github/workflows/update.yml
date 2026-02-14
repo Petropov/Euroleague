@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Run tests
+        run: pytest -q
+
       - name: Run pipeline
         run: |
           SEASON="${{ github.event.inputs.season_code || 'E2025' }}"

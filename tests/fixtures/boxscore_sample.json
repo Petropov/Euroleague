@@ -1,0 +1,55 @@
+{
+  "Stats": [
+    {
+      "Team": "BASKONIA VITORIA-GASTEIZ",
+      "PlayersStats": [
+        {
+          "Player_ID": "P011948   ",
+          "Team": "BAS",
+          "Player": "HOWARD, MARKUS",
+          "Minutes": "22:20",
+          "Points": 12,
+          "FieldGoalsMade2": 1,
+          "FieldGoalsAttempted2": 4,
+          "FieldGoalsMade3": 3,
+          "FieldGoalsAttempted3": 7,
+          "FreeThrowsMade": 1,
+          "FreeThrowsAttempted": 2,
+          "ReboundsTotal": 3,
+          "Assists": 5,
+          "Steals": 1,
+          "Turnovers": 2,
+          "BlocksFavour": 0,
+          "BlocksAgainst": 1,
+          "FoulsCommited": 2,
+          "FoulsReceived": 3
+        }
+      ]
+    },
+    {
+      "Team": "OLYMPIACOS PIRAEUS",
+      "PlayersStats": [
+        {
+          "Player_ID": "P001111",
+          "Team": "OLY",
+          "Player": "SAMPLE, PLAYER",
+          "Minutes": "10:00",
+          "Points": 4,
+          "FieldGoalsMade2": 2,
+          "FieldGoalsAttempted2": 3,
+          "FieldGoalsMade3": 0,
+          "FieldGoalsAttempted3": 1,
+          "FreeThrowsMade": 0,
+          "FreeThrowsAttempted": 0,
+          "ReboundsOffensive": 1,
+          "ReboundsDefensive": 2,
+          "Assists": 1,
+          "Steals": 0,
+          "Turnovers": 1,
+          "BlocksFavour": 0,
+          "FoulsCommited": 1
+        }
+      ]
+    }
+  ]
+}
