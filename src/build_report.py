@@ -15,12 +15,13 @@ from src.config import BASE_DIR, CURATED_DIR, TEAMS
 REPORTS_DIR = BASE_DIR / "reports"
 
 HEADER_TOOLTIPS = {
-    "ts": "Scoring efficiency; ~0.55 is good. >1.0 often means tiny sample.",
-    "usage_proxy": "Possessions used proxy; shows role/load.",
+    "ts": "~0.55 solid, >0.60 strong; >1.0 often small sample.",
+    "usage_proxy": "Role/load proxy; interpret TS with this.",
     "gog_ts": "Change vs previous game; big jumps can be matchup/role.",
     "r5_ts": "5-game average; more stable form signal.",
     "to": "Turnovers; end possessions. Rising TO under high usage is risky.",
     "min": "Coach trust / role. Large gog_min indicates rotation change.",
+    "RiskScore": "Higher = worse; driven by usage burden + low TS + TO.",
 }
 
 
@@ -723,16 +724,85 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
   {_team_block('PAN', pan_takeaways, pan_stack, pan_top_usage, pan_movers, pan_momentum)}
   {_team_block('OLY', oly_takeaways, oly_stack, oly_top_usage, oly_movers, oly_momentum)}
 
-  <details id='definitions'>
+  <details id='definitions' open>
     <summary>Definitions</summary>
+    <p>
+      This report uses efficiency + role context to explain performance. Points alone are noisy; TS/eFG tell
+      you scoring quality; usage_proxy tells you who carried possessions; GoG and r5 show change vs trend.
+    </p>
+
+    <h4>TS (True Shooting)</h4>
     <ul>
-      <li><strong>TS:</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code>.</li>
-      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code>.</li>
-      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code>.</li>
-      <li><strong>GoG:</strong> current minus previous game stat for the same player.</li>
-      <li><strong>r5_*:</strong> rolling 5-game average.</li>
+      <li><strong>What it means:</strong> Scoring efficiency including 3s + free throws (single-number scorer efficiency).</li>
+      <li><strong>Why it matters:</strong> Separates “volume points” from “valuable points”; more predictive than raw PTS.</li>
+      <li><strong>How to read it here:</strong> TS ~ 0.55 is solid, &gt;0.60 strong, &lt;0.50 inefficient. TS can exceed 1.0 in tiny samples; treat TS_OUTLIER/LOW_USAGE as low confidence.</li>
+    </ul>
+    <details>
+      <summary>Show formula</summary>
+      <code>PTS / (2 × (FGA + 0.44 × FTA))</code>
+    </details>
+
+    <h4>eFG (Effective FG%)</h4>
+    <ul>
+      <li><strong>What it means:</strong> Shot value per attempt, giving 3s extra weight vs 2s.</li>
+      <li><strong>Why it matters:</strong> Isolates shooting from free throws; useful to spot hot/cold shooting nights.</li>
+      <li><strong>How to read it here:</strong> Compare eFG with TS—if TS is high but eFG is low, free throws likely drove efficiency.</li>
+    </ul>
+    <details>
+      <summary>Show formula</summary>
+      <code>(FGM + 0.5 × 3PM) / FGA</code>
+    </details>
+
+    <h4>usage_proxy</h4>
+    <ul>
+      <li><strong>What it means:</strong> Approximate possessions used: FGA + 0.44×FTA + TO.</li>
+      <li><strong>Why it matters:</strong> Role indicator; high usage means offense ran through that player.</li>
+      <li><strong>How to read it here:</strong> High usage + good TS = star-level impact. High usage + low TS (and/or HIGH_TO) = risk/drag. Low usage + high TS usually profiles as a finisher and can be small-sample sensitive.</li>
+    </ul>
+    <details>
+      <summary>Show formula</summary>
+      <code>FGA + 0.44 × FTA + TO</code> <span class='muted'>(mirrors possession-ending events)</span>
+    </details>
+
+    <h4>GoG (Game-over-Game)</h4>
+    <ul>
+      <li><strong>What it means:</strong> Current stat minus previous game stat for the same player.</li>
+      <li><strong>Why it matters:</strong> Detects shocks from role change, matchup, foul trouble, or injury/return.</li>
+      <li><strong>How to read it here:</strong> Always pair with Confidence + Flags. ROLE_SPIKE (Δmin) suggests rotation change; USG_SPIKE suggests more on-ball responsibility.</li>
+    </ul>
+
+    <h4>r5_* (Rolling 5)</h4>
+    <ul>
+      <li><strong>What it means:</strong> 5-game average.</li>
+      <li><strong>Why it matters:</strong> Stabilizes noise and gives a better form read than one game.</li>
+      <li><strong>How to read it here:</strong> When GoG and r5 move in the same direction, the trend signal is stronger.</li>
+    </ul>
+
+    <h4>Minutes (min)</h4>
+    <ul>
+      <li><strong>What it means:</strong> Coach trust / rotation role size.</li>
+      <li><strong>Why it matters:</strong> Minute spikes often precede stat spikes; minute drops can explain weak boxscores.</li>
+      <li><strong>How to read it here:</strong> Trust HIGH confidence (min ≥20) more than LOW.</li>
+    </ul>
+
+    <h4>Turnovers (TO)</h4>
+    <ul>
+      <li><strong>What it means:</strong> Possessions ended with a mistake.</li>
+      <li><strong>Why it matters:</strong> High TO is costly, especially when paired with high usage.</li>
+      <li><strong>How to read it here:</strong> TO 3+ is a red flag; rising gog_to under high usage signals growing risk.</li>
     </ul>
   </details>
+
+  <div class='callout'>
+    <p class='note'><strong>Quick interpretation cheat-sheet</strong></p>
+    <ul>
+      <li>Start with Impact/Trend top 3 + Why-ranked notes.</li>
+      <li>Then check Top Usage to see who carried possessions.</li>
+      <li>If a player shows TS_OUTLIER or LOW_USAGE, treat their efficiency as low-confidence.</li>
+      <li>If HIGH_TO appears, downgrade performance quality even when points are high.</li>
+      <li>Prefer r5_* for “form”, GoG for “shock”.</li>
+    </ul>
+  </div>
 
   <script>
     (() => {{
