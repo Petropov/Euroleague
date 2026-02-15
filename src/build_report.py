@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import math
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
@@ -11,6 +13,7 @@ from typing import Iterable
 import pandas as pd
 
 from src.config import BASE_DIR, CURATED_DIR, TEAMS
+from src.fetch_schedule import next_pan_game
 
 REPORTS_DIR = BASE_DIR / "reports"
 
@@ -469,6 +472,91 @@ def _build_team_section(
     return f"<h4>{team_code}</h4>" f"<p class='note'>{note}</p>" f"{_format_table(filtered, columns)}"
 
 
+def _prediction_block(season_code: str) -> str:
+    model_path = BASE_DIR / "data" / "models" / f"win_model_{season_code}.json"
+    team_game_path = CURATED_DIR / "team_game.csv"
+    if not model_path.exists() or not team_game_path.exists():
+        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming game found.</p></section>"
+
+    model = json.loads(model_path.read_text(encoding="utf-8"))
+    next_game = next_pan_game(season_code)
+    if not next_game:
+        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming game found.</p></section>"
+
+    team = pd.read_csv(team_game_path)
+    if "season_code" in team.columns:
+        team = team[team["season_code"] == season_code].copy()
+    team["date"] = pd.to_datetime(team["date"], errors="coerce", utc=True)
+    game_date = pd.to_datetime(next_game.get("date"), errors="coerce", utc=True)
+
+    pre_cutoff = game_date - pd.Timedelta(days=1)
+    hist = team[team["date"] <= pre_cutoff].copy()
+
+    feat_cols = {
+        "r5_team_ts_pre": "d_r5_ts_pre",
+        "r5_team_efg_pre": "d_r5_efg_pre",
+        "r5_team_to_pre": "d_r5_to_pre",
+        "r5_margin_pre": "d_r5_margin_pre",
+        "r5_usage_conc_top3_pre": "d_r5_usage_conc_pre",
+    }
+
+    hist = hist.sort_values(["team_code", "date", "gamecode_num"], kind="stable")
+    for col in feat_cols:
+        hist[col] = hist.groupby("team_code", sort=False)[col.replace("_pre", "")].transform(
+            lambda s: s.shift(1).rolling(5, min_periods=1).mean()
+        )
+
+    pan_home = next_game.get("home_team_code") == "PAN"
+    opp = next_game.get("away_team_code") if pan_home else next_game.get("home_team_code")
+    home_team = "PAN" if pan_home else opp
+    away_team = opp if pan_home else "PAN"
+
+    home_hist = hist[hist["team_code"] == home_team]
+    away_hist = hist[hist["team_code"] == away_team]
+    home_last = home_hist.iloc[-1] if not home_hist.empty else pd.Series(dtype=float)
+    away_last = away_hist.iloc[-1] if not away_hist.empty else pd.Series(dtype=float)
+
+    feature_names = model["feature_names"]
+    values: dict[str, float] = {}
+    for raw_col, out_col in feat_cols.items():
+        h = float(home_last.get(raw_col, 0.0)) if not home_last.empty else 0.0
+        a = float(away_last.get(raw_col, 0.0)) if not away_last.empty else 0.0
+        values[out_col] = h - a
+    values["home"] = 1.0
+
+    x = [float(values.get(name, 0.0)) for name in feature_names]
+    means = model["scaler_mean"]
+    scales = [s if s else 1.0 for s in model["scaler_scale"]]
+    z = [(xv - m) / s for xv, m, s in zip(x, means, scales)]
+    logit = float(model["intercept"] + sum(c * zv for c, zv in zip(model["coef"], z)))
+    p_home = 1 / (1 + math.exp(-logit))
+    p_pan = p_home if pan_home else (1 - p_home)
+
+    contrib = []
+    for name, coef, zv, xv in zip(feature_names, model["coef"], z, x):
+        contrib.append((name, coef * zv, xv))
+    top = sorted(contrib, key=lambda t: abs(t[1]), reverse=True)[:3]
+    drivers = "".join(
+        f"<li>{'+' if val >= 0 else '-'}{escape(name)} (value {raw:+.3f})</li>" for name, val, raw in top
+    )
+
+    pan_hist_games = len(hist[hist["team_code"] == "PAN"])
+    opp_hist_games = len(hist[hist["team_code"] == opp])
+    min_hist = min(pan_hist_games, opp_hist_games)
+    confidence = "HIGH" if min_hist >= 10 else ("MED" if min_hist >= 5 else "LOW")
+    ha = "Home" if pan_home else "Away"
+    game_date_text = game_date.strftime("%Y-%m-%d %H:%M UTC") if pd.notna(game_date) else "Unknown"
+
+    return (
+        "<section><h3>Next game prediction (Panathinaikos)</h3>"
+        f"<p><strong>Game:</strong> {game_date_text} vs {escape(str(opp))} ({ha})</p>"
+        f"<p><strong>Predicted PAN win probability:</strong> {p_pan * 100:.1f}%</p>"
+        f"<p><strong>Confidence:</strong> {confidence} (PAN prior games: {pan_hist_games}, Opp prior games: {opp_hist_games})</p>"
+        f"<p><strong>Top drivers</strong></p><ul>{drivers}</ul>"
+        "</section>"
+    )
+
+
 def build_report(season_code: str) -> tuple[Path, Path, str]:
     games = _read_curated("games")
 
@@ -519,6 +607,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         )
 
     warning_banner = "".join(f"<div class='warning'>{msg}</div>" for msg in warning_messages)
+    prediction_section = _prediction_block(season_code)
 
     points_cols = [
         "date",
@@ -723,6 +812,8 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
 
   {_team_block('PAN', pan_takeaways, pan_stack, pan_top_usage, pan_movers, pan_momentum)}
   {_team_block('OLY', oly_takeaways, oly_stack, oly_top_usage, oly_movers, oly_momentum)}
+
+  {prediction_section}
 
   <details id='definitions' open>
     <summary>Definitions</summary>

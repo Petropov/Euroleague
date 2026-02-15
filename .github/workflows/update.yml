@@ -1,4 +1,4 @@
-name: Update EuroLeague PAN/OLY data
+name: Update EuroLeague data
 
 on:
   schedule:
@@ -35,41 +35,32 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Run pipeline
+      - name: Run full pipeline
         run: |
           SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
-          python -m src.pipeline --season "$SEASON"
-
-      - name: Build HTML report
-        run: |
-          SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
+          python -m src.fetch_results --season "$SEASON"
+          python -m src.fetch_boxscores --season "$SEASON"
+          python -m src.build_team_game --season "$SEASON"
+          python -m src.build_team_features --season "$SEASON"
+          python -m src.train_win_model --season "$SEASON"
+          python -m src.build_player_gog --season "$SEASON"
           python -m src.build_report --season "$SEASON"
 
-      - name: Smoke check parsed results
-        run: |
-          SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
-          python - <<'PY'
-          import pandas as pd
-          from src.config import CURATED_DIR, TEAMS
-
-          games = pd.read_csv(CURATED_DIR / "games.csv")
-          print("First 3 parsed gamecodes:", games["gamecode_full"].head(3).tolist())
-          pan_oly = games[
-              games["home_team_code"].isin(TEAMS) | games["away_team_code"].isin(TEAMS)
-          ]
-          print("PAN/OLY game count:", len(pan_oly))
-          PY
-          echo "Report output: reports/latest.html"
-          ls -lh reports/latest.html
+      - name: Upload raw boxscore artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-boxscore-cache
+          path: data/raw/boxscore
+          if-no-files-found: ignore
 
       - name: Commit curated updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/curated reports
+          git add data/curated reports data/models
           if git diff --cached --quiet; then
             echo "No curated changes to commit"
             exit 0
           fi
-          git commit -m "chore: update curated EuroLeague PAN/OLY datasets and report"
+          git commit -m "chore: update EuroLeague curated data, model JSON, and report"
           git push

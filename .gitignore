@@ -13,6 +13,8 @@ __pycache__/
 # Model artifacts
 
 data/models/
+!data/models/
+!data/models/*.json
 *.pkl
 *.joblib
 
@@ -22,3 +24,5 @@ data/models/
 *.feather
 *.bin
 *.cache
+data/raw/
+data/cache/
