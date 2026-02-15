@@ -62,5 +62,5 @@ jobs:
             echo "No curated changes to commit"
             exit 0
           fi
-          git commit -m "chore: update EuroLeague curated data, model JSON, and report"
+          git commit -m "chore: update curated data + reports"
           git push
