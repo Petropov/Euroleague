@@ -318,17 +318,29 @@ def _format_table(
     df: pd.DataFrame,
     columns: Iterable[str],
     score_badges: dict[str, str] | None = None,
+    table_class: str = "",
 ) -> str:
     cols = list(columns)
+    class_suffix = f" {table_class}" if table_class else ""
+
+    def _header_cell(col: str) -> str:
+        tip = HEADER_TOOLTIPS.get(col)
+        if tip:
+            return (
+                f"<th>{escape(col)} "
+                f"<span class='info-icon' title='{escape(tip, quote=True)}'>ℹ︎</span></th>"
+            )
+        return f"<th>{escape(col)}</th>"
+
     if df.empty:
-        header_cells = "".join(f"<th>{c}</th>" for c in cols)
+        header_cells = "".join(_header_cell(c) for c in cols)
         table_html = (
-            "<table class='report-table'><thead><tr>"
+            f"<table class='report-table{class_suffix}'><thead><tr>"
             f"{header_cells}"
             "</tr></thead><tbody><tr><td colspan='"
             f"{len(cols)}'>No rows match filter.</td></tr></tbody></table>"
         )
-        return _inject_header_tooltips(table_html)
+        return table_html
 
     render_df = df.loc[:, cols].copy()
     if "date" in render_df.columns:
@@ -337,21 +349,105 @@ def _format_table(
         )
 
     score_badges = score_badges or {}
-    for col in render_df.columns:
-        if col in score_badges:
-            badge_class = score_badges[col]
-            render_df[col] = render_df[col].map(
-                lambda v, b=badge_class: "" if pd.isna(v) else f"<span class='badge {b}'>{v:.3f}</span>"
-            )
-            continue
-        if col == "Confidence":
-            render_df[col] = render_df[col].map(lambda v: "" if pd.isna(v) else _render_confidence_badge(str(v)))
-            continue
-        if pd.api.types.is_numeric_dtype(render_df[col]):
-            render_df[col] = render_df[col].map(lambda v, c=col: _render_cell(v, c))
+    header_cells = "".join(_header_cell(c) for c in cols)
+    rows_html: list[str] = []
+    for _, row in render_df.iterrows():
+        player_name = escape(str(row.get("player_name", ""))).lower()
+        row_cells: list[str] = []
+        for col in cols:
+            value = row[col]
+            if col in score_badges:
+                badge_class = score_badges[col]
+                cell_value = "" if pd.isna(value) else f"<span class='badge {badge_class}'>{value:.3f}</span>"
+            elif col == "Confidence":
+                cell_value = "" if pd.isna(value) else _render_confidence_badge(str(value))
+            elif pd.api.types.is_numeric_dtype(render_df[col]):
+                cell_value = _render_cell(value, col)
+            elif col == "Flags":
+                cell_value = "" if pd.isna(value) else str(value)
+            else:
+                cell_value = "" if pd.isna(value) else escape(str(value))
 
-    table_html = render_df.to_html(index=False, escape=False, border=0, classes="report-table")
-    return _inject_header_tooltips(table_html)
+            td_class = "num" if col != "player_name" else "text player-col"
+            row_cells.append(f"<td data-col='{escape(col)}' class='{td_class}'>{cell_value}</td>")
+
+        rows_html.append(f"<tr data-player-name='{player_name}'>{''.join(row_cells)}</tr>")
+
+    return (
+        f"<table class='report-table{class_suffix}'>"
+        f"<thead><tr>{header_cells}</tr></thead>"
+        f"<tbody>{''.join(rows_html)}</tbody>"
+        "</table>"
+    )
+
+
+def _build_key_takeaways(team_df: pd.DataFrame, risk_df: pd.DataFrame) -> list[str]:
+    if team_df.empty:
+        return ["No latest-game rows found for this team."]
+
+    usage_rank = team_df.sort_values("usage_proxy", ascending=False)
+    top_usage_row = usage_rank.iloc[0]
+    next_usage = usage_rank.iloc[1]["usage_proxy"] if len(usage_rank) > 1 else 0.0
+    usage_line = (
+        f"Usage concentrated: {escape(str(top_usage_row['player_name']))} {top_usage_row['usage_proxy']:.1f} "
+        f"vs next {next_usage:.1f}."
+    )
+
+    eff_scope = team_df[(team_df["min"] >= 15) & (team_df["usage_proxy"] >= 6)]
+    if eff_scope.empty:
+        eff_line = "Efficiency driver: no player met min ≥ 15 and usage ≥ 6 thresholds."
+    else:
+        best_eff = eff_scope.sort_values("ts", ascending=False).iloc[0]
+        eff_line = f"Efficiency led by {escape(str(best_eff['player_name']))} TS {best_eff['ts']:.3f}."
+
+    if risk_df.empty:
+        risk_line = "Primary risk: no qualifying risk rows."
+    else:
+        risk_top = risk_df.sort_values("RiskScore", ascending=False).iloc[0]
+        high_to_rows = risk_df[risk_df["Flags"].fillna("").str.contains("HIGH_TO")]
+        risk_row = high_to_rows.iloc[0] if not high_to_rows.empty else risk_top
+        risk_line = (
+            f"Risk: {escape(str(risk_row['player_name']))} TO {risk_row['to']:.1f} "
+            f"at usage {risk_row['usage_proxy']:.1f}."
+        )
+
+    return [usage_line, eff_line, risk_line]
+
+
+def _render_table_panel(
+    table_id: str,
+    title: str,
+    slim_df: pd.DataFrame,
+    slim_cols: list[str],
+    detail_cols: list[str],
+    score_badges: dict[str, str] | None = None,
+    why_ranked_html: str = "",
+) -> str:
+    detail_df = slim_df.copy()
+    slim_view = slim_df.copy()
+    if "Flags" in slim_view.columns and "Confidence" in slim_view.columns and "Confidence" not in slim_cols:
+        slim_view["Flags"] = slim_view.apply(
+            lambda row: f"{_render_confidence_badge(str(row['Confidence']))} <span class='muted'>{escape(str(row['Flags']))}</span>",
+            axis=1,
+        )
+    details = f"""
+    <div class='table-panel'>
+      <div class='panel-header'>
+        <h4>{escape(title)}</h4>
+        <button class='toggle-details' data-target='{table_id}' type='button'>Show details</button>
+      </div>
+      <div class='table-wrap'>
+        {_format_table(slim_view, slim_cols, score_badges=score_badges, table_class='slim-table')}
+      </div>
+      <div id='{table_id}' class='details-wrap hidden'>
+        <div class='table-wrap'>
+          {_format_table(detail_df, detail_cols, score_badges=score_badges)}
+        </div>
+      </div>
+      {why_ranked_html}
+    </div>
+    """
+    return details
 
 
 def _build_team_section(
@@ -429,38 +525,68 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "min",
         "usage_proxy",
         "pts",
-        "ast",
-        "reb",
-        "stl",
-        "blk",
-        "to",
-        "pf",
         "ts",
-        "efg",
+        "to",
         "gog_pts",
         "gog_ts",
         "gog_to",
         "r5_pts",
         "r5_ts",
-        "r5_efg",
+        "Confidence",
+        "Flags",
     ]
-    eff_cols = [
+    stack_slim_cols = ["player_name", "min", "usage_proxy", "pts", "ts", "to", "ImpactNowScore", "Flags"]
+    trend_slim_cols = ["player_name", "min", "usage_proxy", "pts", "ts", "to", "TrendScore", "Flags"]
+    risk_slim_cols = ["player_name", "min", "usage_proxy", "pts", "ts", "to", "RiskScore", "Flags"]
+    usage_slim_cols = ["player_name", "min", "usage_proxy", "pts", "ts", "to", "r5_ts", "Flags"]
+    movers_slim_cols = ["player_name", "min", "pts", "gog_pts", "ts", "gog_ts", "to", "Flags"]
+    momentum_slim_cols = [
+        "player_name",
+        "min",
+        "usage_proxy",
+        "FormScore",
+        "ts",
+        "gog_ts",
+        "gog_usage_proxy",
+        "gog_min",
+        "Flags",
+    ]
+
+    stack_detail_cols = [
         "date",
         "player_name",
         "min",
         "usage_proxy",
         "pts",
         "ts",
-        "efg",
+        "to",
         "gog_ts",
         "gog_pts",
-        "to",
-        "gog_to",
+        "gog_usage_proxy",
+        "gog_min",
         "r5_ts",
+        "Confidence",
+        "Flags",
     ]
-    watch_cols = ["date", "player_name", "min", "usage_proxy", "pts", "ts", "ast", "to", "r5_ts"]
-    usage_cols = ["date", "player_name", "min", "usage_proxy", "pts", "ts", "ast", "to", "r5_ts", "Confidence", "Flags"]
-    momentum_cols = [
+    usage_detail_cols = [
+        "date",
+        "player_name",
+        "min",
+        "usage_proxy",
+        "pts",
+        "ts",
+        "ast",
+        "to",
+        "gog_usage_proxy",
+        "gog_pts",
+        "gog_ts",
+        "r5_ts",
+        "r5_usage_proxy",
+        "Confidence",
+        "Flags",
+    ]
+    movers_detail_cols = points_cols
+    momentum_detail_cols = [
         "date",
         "player_name",
         "min",
@@ -479,260 +605,164 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "Confidence",
         "Flags",
     ]
-    stack_cols = [
-        "player_name",
-        "min",
-        "usage_proxy",
-        "pts",
-        "ts",
-        "to",
-        "gog_ts",
-        "gog_pts",
-        "gog_usage_proxy",
-        "gog_min",
-        "r5_ts",
-        "Confidence",
-        "Flags",
-    ]
+
+    pan_team_df = latest[latest["team_code"] == "PAN"].copy()
+    oly_team_df = latest[latest["team_code"] == "OLY"].copy()
+    pan_takeaways = _build_key_takeaways(pan_team_df, pan_stack["risk"])
+    oly_takeaways = _build_key_takeaways(oly_team_df, oly_stack["risk"])
+
+    pan_movers = _add_confidence_and_flags(pan_team_df[pan_team_df["min"] >= 5].sort_values(["gog_pts", "pts"], ascending=[False, False]).head(8))
+    oly_movers = _add_confidence_and_flags(oly_team_df[oly_team_df["min"] >= 5].sort_values(["gog_pts", "pts"], ascending=[False, False]).head(8))
+
+    def _takeaway_html(items: list[str]) -> str:
+        return "".join(f"<li>{item}</li>" for item in items)
+
+    def _team_block(team: str, takeaways: list[str], stack: dict[str, pd.DataFrame], usage: pd.DataFrame, movers: pd.DataFrame, momentum: pd.DataFrame) -> str:
+        return f"""
+    <section class='team-pane' data-team='{team}'>
+      <div class='team-header'>
+        <h2>{team} Snapshot</h2>
+        <input type='search' class='team-search' data-team='{team}' placeholder='Filter by player name...' />
+      </div>
+
+      <details open>
+        <summary>Key Takeaways</summary>
+        <div class='callout'>
+          <ul>{_takeaway_html(takeaways)}</ul>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Stack-ranked Insights</summary>
+        {_render_table_panel(f'{team.lower()}-impact', 'Impact', stack['impact'], stack_slim_cols, stack_detail_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'}, why_ranked_html=_render_why_ranked(stack['impact'], 'impact', 'ImpactNowScore'))}
+        {_render_table_panel(f'{team.lower()}-trend', 'Trend', stack['trend'], trend_slim_cols, stack_detail_cols + ['TrendScore'], score_badges={'TrendScore': 'good'}, why_ranked_html=_render_why_ranked(stack['trend'], 'trend', 'TrendScore'))}
+        {_render_table_panel(f'{team.lower()}-risk', 'Risk', stack['risk'], risk_slim_cols, stack_detail_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'}, why_ranked_html=_render_why_ranked(stack['risk'], 'risk', 'RiskScore'))}
+      </details>
+
+      <details>
+        <summary>Top Usage</summary>
+        {_render_table_panel(f'{team.lower()}-usage', 'Top Usage (latest game)', usage, usage_slim_cols, usage_detail_cols)}
+      </details>
+
+      <details>
+        <summary>Top Movers</summary>
+        {_render_table_panel(f'{team.lower()}-movers', 'Top Movers — Points (GoG)', movers, movers_slim_cols, movers_detail_cols)}
+      </details>
+
+      <details>
+        <summary>Momentum Watch</summary>
+        {_render_table_panel(f'{team.lower()}-momentum', 'Momentum Watch', momentum, momentum_slim_cols, momentum_detail_cols)}
+      </details>
+    </section>
+        """
 
     html = f"""<!doctype html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-  <meta charset=\"utf-8\" />
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>EuroLeague PAN/OLY Player Report — {season_code}</title>
   <style>
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 24px; color: #1f2937; }}
-    h1, h2, h3, h4 {{ margin: 0.4rem 0; }}
-    a {{ color: #0f4c81; }}
-    .muted {{ color: #6b7280; }}
-    .summary, .section {{ margin-top: 20px; }}
-    .summary-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }}
-    .card {{ border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #fafafa; }}
-    .value {{ font-size: 1.3rem; font-weight: 700; }}
-    .note {{ display: inline-block; background: #eef6ff; border: 1px solid #c9def8; color: #184e87; border-radius: 999px; padding: 4px 10px; font-size: 0.85rem; margin: 8px 0; }}
-    .warning {{ background: #fff4e5; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-top: 16px; font-weight: 600; color: #92400e; }}
-    table {{ width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 0.90rem; table-layout: auto; }}
-    th, td {{ border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; white-space: nowrap; max-width: 170px; overflow: hidden; text-overflow: ellipsis; }}
-    thead th {{ position: sticky; top: 0; background: #f8fafc; z-index: 1; }}
-    th.sortable {{ cursor: pointer; }}
-    .table-wrap {{ overflow-x: auto; }}
-    .cell {{ display: inline-block; padding: 2px 6px; border-radius: 4px; }}
-    .badge {{ padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }}
-    .badge.good {{ background: #e8f7ee; color: #065f46; }}
-    .badge.bad {{ background: #fde8e8; color: #991b1b; }}
-    .badge.conf-high {{ background: #e8f7ee; color: #065f46; }}
-    .badge.conf-med {{ background: #fff4db; color: #92400e; }}
-    .badge.conf-low {{ background: #fde8e8; color: #991b1b; }}
-    .good {{ background: #e8f7ee; color: #065f46; font-weight: 600; }}
-    .bad  {{ background: #fde8e8; color: #991b1b; font-weight: 600; }}
-    .ok   {{ background: #f3f4f6; color: #111827; }}
-    .tip {{ border-left: 4px solid #0f4c81; background: #eef6ff; padding: 10px 12px; border-radius: 6px; margin-top: 12px; }}
-    .legend {{ display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }}
-    .chip {{ padding: 4px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; }}
-    .chip.green {{ background: #e8f7ee; color: #065f46; }}
-    .chip.gray {{ background: #f3f4f6; color: #111827; }}
-    .chip.red {{ background: #fde8e8; color: #991b1b; }}
-    .info-icon {{ color: #6b7280; font-size: 0.8rem; margin-left: 4px; cursor: help; }}
-    .why-ranked ul {{ margin-top: 6px; margin-bottom: 12px; }}
-    #definitions ul {{ margin-top: 6px; line-height: 1.6; }}
-    #definitions code {{ background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 20px; color: #1f2937; background:#f8fafc; }}
+    h1,h2,h3,h4 {{ margin: .4rem 0; }}
+    .muted {{ color:#6b7280; }}
+    .warning {{ background:#fff4e5; border:1px solid #f59e0b; border-radius:8px; padding:10px; margin:12px 0; }}
+    .tabs {{ display:flex; gap:8px; margin:14px 0; }}
+    .tab-btn {{ border:1px solid #cbd5e1; background:#fff; border-radius:999px; padding:8px 16px; font-weight:700; cursor:pointer; }}
+    .tab-btn.active {{ background:#1d4ed8; color:#fff; border-color:#1d4ed8; }}
+    .team-pane {{ display:none; }}
+    .team-pane.active {{ display:block; }}
+    .team-header {{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap; }}
+    .team-search {{ padding:8px 10px; min-width:260px; border:1px solid #cbd5e1; border-radius:8px; }}
+    details {{ background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; margin:10px 0; }}
+    summary {{ cursor:pointer; font-weight:700; }}
+    .callout {{ background:#eef6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px; margin-top:8px; }}
+    .table-panel {{ margin:10px 0 18px; }}
+    .panel-header {{ display:flex; justify-content:space-between; align-items:center; }}
+    .toggle-details {{ border:1px solid #94a3b8; background:#fff; border-radius:6px; padding:4px 8px; cursor:pointer; }}
+    .details-wrap.hidden {{ display:none; }}
+    .table-wrap {{ overflow:auto; border:1px solid #e2e8f0; border-radius:8px; background:#fff; }}
+    table {{ width:100%; border-collapse:separate; border-spacing:0; font-size:.88rem; }}
+    th,td {{ border-bottom:1px solid #e5e7eb; padding:7px 8px; }}
+    th {{ position:sticky; top:0; background:#f1f5f9; z-index:2; text-align:left; white-space:nowrap; }}
+    tbody tr:nth-child(even) {{ background:#fafafa; }}
+    tbody tr:hover {{ background:#eaf2ff; }}
+    td.num {{ white-space:nowrap; }}
+    td.player-col, th:nth-child(2), td:nth-child(2) {{ white-space:normal; min-width:180px; max-width:280px; }}
+    th:first-child, td:first-child {{ position:sticky; left:0; z-index:1; background:inherit; }}
+    th:nth-child(2), td:nth-child(2) {{ position:sticky; left:100px; z-index:1; background:inherit; }}
+    th:first-child {{ z-index:3; background:#e2e8f0; min-width:100px; }}
+    th:nth-child(2) {{ z-index:3; background:#e2e8f0; }}
+    .badge {{ padding:1px 7px; border-radius:999px; font-size:.78rem; font-weight:700; }}
+    .badge.good,.badge.conf-high {{ background:#e8f7ee; color:#065f46; }}
+    .badge.bad,.badge.conf-low {{ background:#fde8e8; color:#991b1b; }}
+    .badge.conf-med {{ background:#fff4db; color:#92400e; }}
+    .cell.good {{ background:#e8f7ee; color:#065f46; border-radius:4px; padding:1px 5px; }}
+    .cell.bad {{ background:#fde8e8; color:#991b1b; border-radius:4px; padding:1px 5px; }}
+    .cell.ok {{ background:#f1f5f9; color:#0f172a; border-radius:4px; padding:1px 5px; }}
+    .info-icon {{ color:#64748b; font-size:.75rem; }}
+    .why-ranked ul {{ margin-top:6px; }}
   </style>
 </head>
 <body>
-  <h1>EuroLeague PAN/OLY Player Report — Season {season_code} — Generated {timestamp}</h1>
-  <p class=\"muted\">Jump to <a href=\"#definitions\">definitions</a>.</p>
-
-  <section class=\"summary\">
-    <h2>Executive Summary</h2>
-    <div class=\"summary-grid\">
-      <div class=\"card\">
-        <h3>PAN</h3>
-        <ul>
-          <li><strong>Top scoring mover:</strong> {pan_summary['top_scoring']}</li>
-          <li><strong>Top efficiency mover:</strong> {pan_summary['top_eff']}</li>
-          <li><strong>Highest usage:</strong> {pan_summary['highest_usage']}</li>
-          <li><strong>Watchlist (high usage, low TS):</strong> {pan_summary['watchlist']}</li>
-        </ul>
-      </div>
-      <div class=\"card\">
-        <h3>OLY</h3>
-        <ul>
-          <li><strong>Top scoring mover:</strong> {oly_summary['top_scoring']}</li>
-          <li><strong>Top efficiency mover:</strong> {oly_summary['top_eff']}</li>
-          <li><strong>Highest usage:</strong> {oly_summary['highest_usage']}</li>
-          <li><strong>Watchlist (high usage, low TS):</strong> {oly_summary['watchlist']}</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>What we measure &amp; why it matters</h2>
-    <p>We track more than box-score totals because production quality and role context usually explain future games better than single-game points. Efficiency metrics such as TS and eFG tell us whether scoring came from sustainable shot value (threes, free throws, and clean attempts) rather than volume alone.</p>
-    <p>Usage_proxy shows offensive responsibility. A player with high TS on very low usage may simply be finishing easy possessions, while a high-usage player with average TS can still be driving team offense. Reading efficiency together with usage helps separate true creators from low-volume outliers.</p>
-    <p>GoG deltas highlight short-term shocks from one game to the next, which is useful for spotting role changes, injury impacts, or matchup swings quickly. Rolling 5-game metrics (r5_*) smooth one-game noise to reveal underlying form and stabilize interpretation.</p>
-    <p>Turnovers and minutes complete the picture: turnovers end possessions, so rising TO under heavy usage is a warning sign; minutes reflect coach trust and rotation shifts, and sudden minute spikes often precede box-score jumps.</p>
-    <ul>
-      <li><strong>Efficiency (TS, eFG):</strong> shot quality converted into points; better sustainability signal than raw points.</li>
-      <li><strong>usage_proxy:</strong> offensive load proxy that clarifies role and responsibility.</li>
-      <li><strong>GoG deltas:</strong> immediate change detector for form, role, and availability shifts.</li>
-      <li><strong>r5_* rolling:</strong> trend lens that reduces game-level randomness.</li>
-      <li><strong>Turnovers (TO, gog_to):</strong> possession killers, especially concerning when paired with high usage.</li>
-      <li><strong>Minutes (min, gog_min):</strong> rotation confidence indicator; spikes can foreshadow bigger stat lines.</li>
-    </ul>
-    <div class="tip">
-      <strong>How to read this report:</strong> Start with <em>Stack-ranked Insights</em>, then verify context in <em>Top Usage</em>, then confirm direction in <em>Momentum Watch</em>. Treat TS above 1.0 as a likely small-sample/outlier artifact from limited attempts or free-throw weighting.
-    </div>
-    <div class="legend">
-      <span class="chip green">Green: strong / positive</span>
-      <span class="chip gray">Gray: neutral</span>
-      <span class="chip red">Red: concerning / negative</span>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>Stack-ranked Insights (per team)</h2>
-    <p class='note'>Scope: latest game per player. Top 8 per list for PAN and OLY.</p>
-    <div class="table-wrap">
-      <h3>PAN</h3>
-      <h4>Impact Now</h4>
-      <p class='note'>Filter guardrail: usage_proxy ≥ 6 and min ≥ 12; TS contribution capped at 0.80 for scoring.</p>
-      {_format_table(pan_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
-      {_render_why_ranked(pan_stack['impact'], 'impact', 'ImpactNowScore')}
-      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
-      <h4>Trend</h4>
-      <p class='note'>Filter guardrail: min ≥ 10 and (usage_proxy ≥ 6 or min ≥ 20); GoG TS contribution capped to ±0.30 for scoring.</p>
-      {_format_table(pan_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
-      {_render_why_ranked(pan_stack['trend'], 'trend', 'TrendScore')}
-      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
-      <h4>Risk</h4>
-      <p class='note'>Filter guardrail: min ≥ 10. Flags emphasize HIGH_TO and LOW_USAGE visibility.</p>
-      {_format_table(pan_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
-      {_render_why_ranked(pan_stack['risk'], 'risk', 'RiskScore')}
-      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
-
-      <h3>OLY</h3>
-      <h4>Impact Now</h4>
-      <p class='note'>Filter guardrail: usage_proxy ≥ 6 and min ≥ 12; TS contribution capped at 0.80 for scoring.</p>
-      {_format_table(oly_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
-      {_render_why_ranked(oly_stack['impact'], 'impact', 'ImpactNowScore')}
-      <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
-      <h4>Trend</h4>
-      <p class='note'>Filter guardrail: min ≥ 10 and (usage_proxy ≥ 6 or min ≥ 20); GoG TS contribution capped to ±0.30 for scoring.</p>
-      {_format_table(oly_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
-      {_render_why_ranked(oly_stack['trend'], 'trend', 'TrendScore')}
-      <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
-      <h4>Risk</h4>
-      <p class='note'>Filter guardrail: min ≥ 10. Flags emphasize HIGH_TO and LOW_USAGE visibility.</p>
-      {_format_table(oly_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
-      {_render_why_ranked(oly_stack['risk'], 'risk', 'RiskScore')}
-      <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
-    </div>
-  </section>
-
+  <h1>EuroLeague PAN/OLY Player Report — Season {season_code}</h1>
+  <p class='muted'>Generated {timestamp}. Games date range: {min_game_date} → {max_game_date}.</p>
   {warning_banner}
 
-  <section class=\"summary\">
-    <h2>Data freshness</h2>
-    <div class=\"summary-grid\">
-      <div class=\"card\"><div>Total games parsed</div><div class=\"value\">{len(games_all_season)}</div></div>
-      <div class=\"card\"><div>PAN/OLY games found</div><div class=\"value\">{len(games_season)}</div></div>
-      <div class=\"card\"><div>player_game rows</div><div class=\"value\">{len(player_game_season)}</div></div>
-      <div class=\"card\"><div>player_gog rows</div><div class=\"value\">{len(player_gog_season)}</div></div>
-      <div class=\"card\"><div>Games date range</div><div class=\"value\">{min_game_date} → {max_game_date}</div></div>
-      <div class=\"card\"><div>Latest game date</div><div class=\"value\">{max_game_date}</div></div>
-      <div class=\"card\"><div>Report generated</div><div class=\"value\">{timestamp}</div></div>
-    </div>
+  <section>
+    <h3>Executive Summary</h3>
+    <p><strong>PAN:</strong> Top scoring mover {pan_summary['top_scoring']} · Highest usage {pan_summary['highest_usage']}</p>
+    <p><strong>OLY:</strong> Top scoring mover {oly_summary['top_scoring']} · Highest usage {oly_summary['highest_usage']}</p>
   </section>
 
-  <section class=\"section\">
-    <h2>Top movers — Points (GoG)</h2>
-    <div class=\"table-wrap\">
-      {_build_team_section(latest, "PAN", "Top movers — Points (GoG)", "Filter: latest game per player, min ≥ 5.", lambda d: d["min"] >= 5, ["gog_pts", "pts"], [False, False], points_cols)}
-      {_build_team_section(latest, "OLY", "Top movers — Points (GoG)", "Filter: latest game per player, min ≥ 5.", lambda d: d["min"] >= 5, ["gog_pts", "pts"], [False, False], points_cols)}
-    </div>
-  </section>
+  <div class='tabs'>
+    <button class='tab-btn active' data-team='PAN' type='button'>PAN</button>
+    <button class='tab-btn' data-team='OLY' type='button'>OLY</button>
+  </div>
 
-  <section class=\"section\">
-    <h2>Top movers — Efficiency (GoG TS)</h2>
-    <div class=\"table-wrap\">
-      {_build_team_section(latest, "PAN", "Top movers — Efficiency (GoG TS)", "Filter: latest game per player, min ≥ 10 and usage_proxy ≥ 6. Sorted by gog_ts desc.", lambda d: (d["min"] >= 10) & (d["usage_proxy"] >= 6), ["gog_ts", "ts"], [False, False], eff_cols)}
-      {_build_team_section(latest, "OLY", "Top movers — Efficiency (GoG TS)", "Filter: latest game per player, min ≥ 10 and usage_proxy ≥ 6. Sorted by gog_ts desc.", lambda d: (d["min"] >= 10) & (d["usage_proxy"] >= 6), ["gog_ts", "ts"], [False, False], eff_cols)}
-    </div>
-  </section>
+  {_team_block('PAN', pan_takeaways, pan_stack, pan_top_usage, pan_movers, pan_momentum)}
+  {_team_block('OLY', oly_takeaways, oly_stack, oly_top_usage, oly_movers, oly_momentum)}
 
-  <section class=\"section\">
-    <h2>High usage, low efficiency (watchlist)</h2>
-    <div class=\"table-wrap\">
-      {_build_team_section(latest, "PAN", "High usage, low efficiency (watchlist)", "Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.", lambda d: (d["usage_proxy"] >= 12) & (d["ts"] < 0.50) & (d["min"] >= 10), ["usage_proxy", "ts"], [False, True], watch_cols)}
-      {_build_team_section(latest, "OLY", "High usage, low efficiency (watchlist)", "Filter: latest game per player, usage_proxy ≥ 12, ts < 0.50, min ≥ 10.", lambda d: (d["usage_proxy"] >= 12) & (d["ts"] < 0.50) & (d["min"] >= 10), ["usage_proxy", "ts"], [False, True], watch_cols)}
-    </div>
-  </section>
-
-  <section class=\"section\">
-    <h2>Top Usage (latest game)</h2>
-    <p class='note'>usage_proxy approximates possessions used: <code>FGA + 0.44 × FTA + TO</code>.</p>
-    <div class=\"table-wrap\">
-      <h4>PAN</h4>
-      {_format_table(pan_top_usage, usage_cols)}
-      <h4>OLY</h4>
-      {_format_table(oly_top_usage, usage_cols)}
-    </div>
-  </section>
-
-  <section class=\"section\">
-    <h2>Momentum Watch (latest game per player)</h2>
-    <p class='note'>Filter: min ≥ 10 and usage_proxy ≥ 6 in latest game. FormScore is a heuristic.</p>
-    <div class=\"table-wrap\">
-      <h4>PAN</h4>
-      {_format_table(pan_momentum, momentum_cols)}
-      <h4>OLY</h4>
-      {_format_table(oly_momentum, momentum_cols)}
-    </div>
-  </section>
-
-  <section id=\"definitions\" class=\"section\">
-    <h2>Footnotes / Definitions</h2>
+  <details id='definitions'>
+    <summary>Definitions</summary>
     <ul>
-      <li><strong>TS (True Shooting):</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code> — scoring efficiency adjusted for 3s and free throws; best single-number scorer efficiency proxy.</li>
-      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code> — shooting value per attempt, rewarding 3-point shot value above 2s.</li>
-      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code> — approximate possessions a player consumed; proxy for offensive load.</li>
-      <li><strong>GoG (game-over-game):</strong> <code>current_stat - previous_game_stat</code> for the same <code>player_id</code> — detects sudden changes game-to-game (role, matchup, injury, form).</li>
-      <li><strong>r5_*:</strong> <code>rolling_5_game_mean(stat)</code> — reduces randomness and is usually better for reading true form.</li>
-      <li><strong>min conversion:</strong> <code>MM:SS → minutes_float</code></li>
+      <li><strong>TS:</strong> <code>PTS / (2 × (FGA + 0.44 × FTA))</code>.</li>
+      <li><strong>eFG:</strong> <code>(FGM + 0.5 × 3PM) / FGA</code>.</li>
+      <li><strong>usage_proxy:</strong> <code>FGA + 0.44 × FTA + TO</code>.</li>
+      <li><strong>GoG:</strong> current minus previous game stat for the same player.</li>
+      <li><strong>r5_*:</strong> rolling 5-game average.</li>
     </ul>
-  </section>
+  </details>
 
   <script>
-    (function () {{
-      function parseCell(text) {{
-        const cleaned = text.trim().replace(/,/g, '');
-        const num = Number(cleaned);
-        return Number.isNaN(num) ? cleaned.toLowerCase() : num;
+    (() => {{
+      const tabButtons = document.querySelectorAll('.tab-btn');
+      const panes = document.querySelectorAll('.team-pane');
+      function setTeam(team) {{
+        tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.team === team));
+        panes.forEach((pane) => pane.classList.toggle('active', pane.dataset.team === team));
       }}
+      tabButtons.forEach((btn) => btn.addEventListener('click', () => setTeam(btn.dataset.team)));
+      setTeam('PAN');
 
-      document.querySelectorAll('table.report-table').forEach((table) => {{
-        const headers = table.querySelectorAll('thead th');
-        const tbody = table.querySelector('tbody');
-        if (!tbody) return;
+      document.querySelectorAll('.toggle-details').forEach((btn) => {{
+        btn.addEventListener('click', () => {{
+          const target = document.getElementById(btn.dataset.target);
+          if (!target) return;
+          target.classList.toggle('hidden');
+          btn.textContent = target.classList.contains('hidden') ? 'Show details' : 'Hide details';
+        }});
+      }});
 
-        headers.forEach((th, idx) => {{
-          th.classList.add('sortable');
-          th.dataset.order = 'desc';
-          th.addEventListener('click', () => {{
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            const asc = th.dataset.order === 'asc';
-            rows.sort((a, b) => {{
-              const va = parseCell(a.children[idx].innerText);
-              const vb = parseCell(b.children[idx].innerText);
-              if (va < vb) return asc ? -1 : 1;
-              if (va > vb) return asc ? 1 : -1;
-              return 0;
-            }});
-            rows.forEach((r) => tbody.appendChild(r));
-            headers.forEach((h) => (h.dataset.order = 'desc'));
-            th.dataset.order = asc ? 'desc' : 'asc';
+      document.querySelectorAll('.team-search').forEach((input) => {{
+        input.addEventListener('input', () => {{
+          const team = input.dataset.team;
+          const q = input.value.trim().toLowerCase();
+          const pane = document.querySelector(`.team-pane[data-team='${{team}}']`);
+          if (!pane) return;
+          pane.querySelectorAll('tbody tr').forEach((row) => {{
+            const player = (row.dataset.playerName || '').toLowerCase();
+            row.style.display = !q || player.includes(q) ? '' : 'none';
           }});
         }});
       }});
