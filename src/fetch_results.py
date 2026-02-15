@@ -57,15 +57,9 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
         else:
             raise
 
-    games = _require_parsed_games(xml_text, season_code, status_code)
-    games_df = pd.DataFrame(games)
-
+    games_df = pd.DataFrame(_require_parsed_games(xml_text, season_code, status_code))
     games_df["season_code"] = season_code
     games_df["date"] = games_df["date"].map(_to_iso_datetime)
-
-    total_games = len(games_df)
-    logger.info("Total games parsed for %s: %s", season_code, total_games)
-
     games_df = games_df.sort_values(["date", "gamecode_num"], kind="stable").reset_index(drop=True)
 
     pan_oly_df = games_df[
@@ -73,20 +67,16 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
     ].copy()
     pan_oly_df = pan_oly_df.sort_values(["date", "gamecode_num"], kind="stable").reset_index(drop=True)
 
-    pan_oly_count = len(pan_oly_df)
-    logger.info("PAN/OLY games found for %s: %s", season_code, pan_oly_count)
+    logger.info("Total games parsed for %s: %s", season_code, len(games_df))
+    logger.info("PAN/OLY games found for %s: %s", season_code, len(pan_oly_df))
 
-    games_df.to_parquet(CURATED_DIR / "games_all.parquet", index=False)
     games_df.to_csv(CURATED_DIR / "games_all.csv", index=False)
-
-    pan_oly_df.to_parquet(CURATED_DIR / "games.parquet", index=False)
     pan_oly_df.to_csv(CURATED_DIR / "games.csv", index=False)
-
     return games_df
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch EuroLeague results feed and curate PAN/OLY games")
+    parser = argparse.ArgumentParser(description="Fetch EuroLeague results feed and curate games")
     parser.add_argument("--season", dest="season_code", default=DEFAULT_SEASON_CODE)
     args = parser.parse_args()
     run(season_code=args.season_code)

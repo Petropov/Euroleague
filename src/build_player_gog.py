@@ -14,18 +14,17 @@ TARGET_STATS = ["min", "pts", "reb", "ast", "stl", "blk", "to", "pf", "ts", "efg
 
 def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
     logger = get_logger(LOG_DIR / "pipeline.log")
-    player_path = CURATED_DIR / "player_game.parquet"
+    player_path = CURATED_DIR / "player_game.csv"
     if not player_path.exists():
-        raise FileNotFoundError("player_game.parquet not found. Run fetch_boxscores first.")
+        raise FileNotFoundError("player_game.csv not found. Run fetch_boxscores first.")
 
-    df = pd.read_parquet(player_path)
+    df = pd.read_csv(player_path)
     if "season_code" in df.columns:
         df = df[df["season_code"] == season_code].copy()
 
     if df.empty:
         logger.warning("No player_game rows for %s; writing empty player_gog.", season_code)
         out = pd.DataFrame()
-        out.to_parquet(CURATED_DIR / "player_gog.parquet", index=False)
         out.to_csv(CURATED_DIR / "player_gog.csv", index=False)
         return out
 
@@ -38,7 +37,6 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
         df[f"gog_{stat}"] = group.diff().fillna(0.0)
         df[f"r5_{stat}"] = group.transform(lambda s: s.rolling(5, min_periods=1).mean())
 
-    df.to_parquet(CURATED_DIR / "player_gog.parquet", index=False)
     df.to_csv(CURATED_DIR / "player_gog.csv", index=False)
     logger.info("player_gog rows written: %s", len(df))
     return df
