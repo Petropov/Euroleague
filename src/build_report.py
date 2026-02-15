@@ -1,4 +1,4 @@
-"""Build self-contained HTML player report for PAN/OLY."""
+"""Build self-contained HTML player report for EuroLeague teams."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Iterable
 
 import pandas as pd
 
-from src.config import BASE_DIR, CURATED_DIR, TEAMS
+from src.config import BASE_DIR, CURATED_DIR
 from src.fetch_schedule import next_pan_game
 
 REPORTS_DIR = BASE_DIR / "reports"
@@ -40,8 +40,11 @@ def _read_curated(name: str) -> pd.DataFrame:
     raise FileNotFoundError(f"Could not find curated dataset for '{name}'")
 
 
-def _prepare_latest_by_player(player_gog: pd.DataFrame, season_code: str) -> pd.DataFrame:
-    team_scope = sorted(TEAMS)
+def _prepare_latest_by_player(
+    player_gog: pd.DataFrame,
+    season_code: str,
+    team_scope: list[str],
+) -> pd.DataFrame:
     scoped = player_gog[
         (player_gog["season_code"] == season_code) & (player_gog["team_code"].isin(team_scope))
     ].copy()
@@ -559,6 +562,7 @@ def _prediction_block(season_code: str) -> str:
 
 def build_report(season_code: str) -> tuple[Path, Path, str]:
     games = _read_curated("games")
+    team_game = _read_curated("team_game")
 
     games_all_fallback = False
     try:
@@ -570,28 +574,32 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     player_game = _read_curated("player_game")
     player_gog = _read_curated("player_gog")
 
+    team_game_season = team_game[team_game["season_code"] == season_code].copy()
+    team_codes = sorted(team_game_season["team_code"].dropna().unique().tolist())
+    if not team_codes:
+        raise ValueError(f"No team_code values found in team_game for season '{season_code}'")
+    default_team = "PAN" if "PAN" in team_codes else team_codes[0]
+
     games_all_season = games_all[games_all["season_code"] == season_code].copy()
     games_season = games[games["season_code"] == season_code].copy()
     player_game_season = player_game[player_game["season_code"] == season_code]
     player_gog_season = player_gog[player_gog["season_code"] == season_code]
 
-    latest = _prepare_latest_by_player(player_gog, season_code)
+    latest = _prepare_latest_by_player(player_gog, season_code, team_codes)
     min_game_date, max_game_date = _extract_game_date_range(games_all_season)
-    pan_momentum = _compute_momentum_watch(latest, "PAN")
-    oly_momentum = _compute_momentum_watch(latest, "OLY")
-    pan_top_usage = _compute_top_usage(latest, "PAN")
-    oly_top_usage = _compute_top_usage(latest, "OLY")
-    pan_stack = _compute_stack_rankings(latest, "PAN")
-    oly_stack = _compute_stack_rankings(latest, "OLY")
-    pan_summary = _latest_team_summary(latest, "PAN")
-    oly_summary = _latest_team_summary(latest, "OLY")
-
-    pan_stack = {k: _add_confidence_and_flags(v) for k, v in pan_stack.items()}
-    oly_stack = {k: _add_confidence_and_flags(v) for k, v in oly_stack.items()}
-    pan_top_usage = _add_confidence_and_flags(pan_top_usage)
-    oly_top_usage = _add_confidence_and_flags(oly_top_usage)
-    pan_momentum = _add_confidence_and_flags(pan_momentum)
-    oly_momentum = _add_confidence_and_flags(oly_momentum)
+    team_data: dict[str, dict[str, object]] = {}
+    for team in team_codes:
+        stack = _compute_stack_rankings(latest, team)
+        team_df = latest[latest["team_code"] == team].copy()
+        movers = team_df[team_df["min"] >= 5].sort_values(["gog_pts", "pts"], ascending=[False, False]).head(8)
+        team_data[team] = {
+            "summary": _latest_team_summary(latest, team),
+            "stack": {k: _add_confidence_and_flags(v) for k, v in stack.items()},
+            "usage": _add_confidence_and_flags(_compute_top_usage(latest, team)),
+            "momentum": _add_confidence_and_flags(_compute_momentum_watch(latest, team)),
+            "team_df": team_df,
+            "movers": _add_confidence_and_flags(movers),
+        }
 
     generated_at = datetime.now(timezone.utc)
     timestamp = generated_at.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -696,13 +704,11 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "Flags",
     ]
 
-    pan_team_df = latest[latest["team_code"] == "PAN"].copy()
-    oly_team_df = latest[latest["team_code"] == "OLY"].copy()
-    pan_takeaways = _build_key_takeaways(pan_team_df, pan_stack["risk"])
-    oly_takeaways = _build_key_takeaways(oly_team_df, oly_stack["risk"])
-
-    pan_movers = _add_confidence_and_flags(pan_team_df[pan_team_df["min"] >= 5].sort_values(["gog_pts", "pts"], ascending=[False, False]).head(8))
-    oly_movers = _add_confidence_and_flags(oly_team_df[oly_team_df["min"] >= 5].sort_values(["gog_pts", "pts"], ascending=[False, False]).head(8))
+    for team in team_codes:
+        team_data[team]["takeaways"] = _build_key_takeaways(
+            team_data[team]["team_df"],
+            team_data[team]["stack"]["risk"],
+        )
 
     def _takeaway_html(items: list[str]) -> str:
         return "".join(f"<li>{item}</li>" for item in items)
@@ -751,7 +757,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EuroLeague PAN/OLY Player Report — {season_code}</title>
+  <title>EuroLeague Team Player Report — {season_code}</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 20px; color: #1f2937; background:#f8fafc; }}
     h1,h2,h3,h4 {{ margin: .4rem 0; }}
@@ -795,23 +801,37 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
   </style>
 </head>
 <body>
-  <h1>EuroLeague PAN/OLY Player Report — Season {season_code}</h1>
+  <h1>EuroLeague Team Player Report — Season {season_code}</h1>
   <p class='muted'>Generated {timestamp}. Games date range: {min_game_date} → {max_game_date}.</p>
   {warning_banner}
 
   <section>
     <h3>Executive Summary</h3>
-    <p><strong>PAN:</strong> Top scoring mover {pan_summary['top_scoring']} · Highest usage {pan_summary['highest_usage']}</p>
-    <p><strong>OLY:</strong> Top scoring mover {oly_summary['top_scoring']} · Highest usage {oly_summary['highest_usage']}</p>
+    {"".join(
+      f"<p><strong>{team}:</strong> Top scoring mover {team_data[team]['summary']['top_scoring']} · "
+      f"Highest usage {team_data[team]['summary']['highest_usage']}</p>"
+      for team in team_codes
+    )}
   </section>
 
   <div class='tabs'>
-    <button class='tab-btn active' data-team='PAN' type='button'>PAN</button>
-    <button class='tab-btn' data-team='OLY' type='button'>OLY</button>
+    {"".join(
+      f"<button class='tab-btn{' active' if team == default_team else ''}' data-team='{team}' type='button'>{team}</button>"
+      for team in team_codes
+    )}
   </div>
 
-  {_team_block('PAN', pan_takeaways, pan_stack, pan_top_usage, pan_movers, pan_momentum)}
-  {_team_block('OLY', oly_takeaways, oly_stack, oly_top_usage, oly_movers, oly_momentum)}
+  {"".join(
+    _team_block(
+      team,
+      team_data[team]['takeaways'],
+      team_data[team]['stack'],
+      team_data[team]['usage'],
+      team_data[team]['movers'],
+      team_data[team]['momentum'],
+    )
+    for team in team_codes
+  )}
 
   {prediction_section}
 
@@ -904,7 +924,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         panes.forEach((pane) => pane.classList.toggle('active', pane.dataset.team === team));
       }}
       tabButtons.forEach((btn) => btn.addEventListener('click', () => setTeam(btn.dataset.team)));
-      setTeam('PAN');
+      setTeam('{default_team}');
 
       document.querySelectorAll('.toggle-details').forEach((btn) => {{
         btn.addEventListener('click', () => {{
@@ -949,7 +969,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build PAN/OLY HTML report")
+    parser = argparse.ArgumentParser(description="Build EuroLeague HTML report")
     parser.add_argument("--season", required=True, help="Season code, e.g. E2025")
     args = parser.parse_args()
 
