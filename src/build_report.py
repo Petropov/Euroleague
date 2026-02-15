@@ -476,12 +476,12 @@ def _prediction_block(season_code: str) -> str:
     model_path = BASE_DIR / "data" / "models" / f"win_model_{season_code}.json"
     team_game_path = CURATED_DIR / "team_game.csv"
     if not model_path.exists() or not team_game_path.exists():
-        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming game found.</p></section>"
+        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming PAN game found in schedules feed.</p></section>"
 
     model = json.loads(model_path.read_text(encoding="utf-8"))
     next_game = next_pan_game(season_code)
     if not next_game:
-        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming game found.</p></section>"
+        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming PAN game found in schedules feed.</p></section>"
 
     team = pd.read_csv(team_game_path)
     if "season_code" in team.columns:
