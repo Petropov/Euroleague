@@ -14,6 +14,15 @@ from src.config import BASE_DIR, CURATED_DIR, TEAMS
 
 REPORTS_DIR = BASE_DIR / "reports"
 
+HEADER_TOOLTIPS = {
+    "ts": "Scoring efficiency; ~0.55 is good. >1.0 often means tiny sample.",
+    "usage_proxy": "Possessions used proxy; shows role/load.",
+    "gog_ts": "Change vs previous game; big jumps can be matchup/role.",
+    "r5_ts": "5-game average; more stable form signal.",
+    "to": "Turnovers; end possessions. Rising TO under high usage is risky.",
+    "min": "Coach trust / role. Large gog_min indicates rotation change.",
+}
+
 
 def _read_curated(name: str) -> pd.DataFrame:
     """Read curated dataset from CSV, with parquet fallback."""
@@ -97,43 +106,125 @@ def _robust_norm(series: pd.Series) -> pd.Series:
     return series / denom
 
 
+def _add_confidence_and_flags(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        out = df.copy()
+        out["Confidence"] = pd.Series(dtype="object")
+        out["Flags"] = pd.Series(dtype="object")
+        return out
+
+    out = df.copy()
+    out["Confidence"] = "MED"
+    out.loc[out["min"] >= 20, "Confidence"] = "HIGH"
+    out.loc[out["min"] < 12, "Confidence"] = "LOW"
+
+    def _row_flags(row: pd.Series) -> str:
+        flags: list[str] = []
+        if row.get("usage_proxy", 0) < 8:
+            flags.append("LOW_USAGE")
+        if row.get("ts", 0) > 1.0:
+            flags.append("TS_OUTLIER")
+        if row.get("to", 0) >= 3:
+            flags.append("HIGH_TO")
+        if row.get("gog_min", 0) >= 5:
+            flags.append("ROLE_SPIKE")
+        if row.get("gog_usage_proxy", 0) >= 5:
+            flags.append("USG_SPIKE")
+        if row.get("gog_ts", 0) <= -0.15:
+            flags.append("EFF_DROP")
+        if row.get("ts", 0) >= 0.65 and row.get("min", 0) >= 15:
+            flags.append("HOT")
+        return "|".join(flags) if flags else "-"
+
+    out["Flags"] = out.apply(_row_flags, axis=1)
+    return out
+
+
+def _inject_header_tooltips(table_html: str) -> str:
+    for col, tip in HEADER_TOOLTIPS.items():
+        header = (
+            f"<th>{col} "
+            f"<span class='info-icon' title='{escape(tip, quote=True)}'>ℹ︎</span></th>"
+        )
+        table_html = table_html.replace(f"<th>{col}</th>", header)
+    return table_html
+
+
+def _render_confidence_badge(value: str) -> str:
+    css = {"HIGH": "conf-high", "MED": "conf-med", "LOW": "conf-low"}.get(value, "conf-med")
+    return f"<span class='badge {css}'>{escape(value)}</span>"
+
+
+def _render_why_ranked(df: pd.DataFrame, list_type: str, score_col: str) -> str:
+    if df.empty:
+        return "<p class='muted'>Why these are ranked #1–#3: no qualifying players.</p>"
+
+    top3 = df.head(3)
+    items: list[str] = []
+    for _, row in top3.iterrows():
+        player = escape(str(row["player_name"]))
+        confidence = _render_confidence_badge(str(row.get("Confidence", "MED")))
+        flags = escape(str(row.get("Flags", "-")))
+        if list_type == "impact":
+            sentence = (
+                f"{player}: {row['pts']:.1f} pts on TS {row['ts']:.3f}; usage {row['usage_proxy']:.1f}; "
+                f"TO {row['to']:.1f}."
+            )
+        elif list_type == "trend":
+            sentence = (
+                f"{player}: ΔTS {row['gog_ts']:+.2f}, ΔPTS {row['gog_pts']:+.2f}, "
+                f"ΔUSG {row['gog_usage_proxy']:+.2f}, ΔMIN {row['gog_min']:+.2f}."
+            )
+        else:
+            sentence = (
+                f"{player}: usage {row['usage_proxy']:.1f} with TS {row['ts']:.3f} and TO {row['to']:.1f} "
+                f"(risk score {row[score_col]:.3f})."
+            )
+        items.append(f"<li>{sentence} {confidence} <span class='muted'>Flags: {flags}</span></li>")
+
+    return "<div class='why-ranked'><strong>Why these are ranked #1–#3:</strong><ul>" + "".join(items) + "</ul></div>"
+
+
 def _compute_stack_rankings(latest_df: pd.DataFrame, team_code: str) -> dict[str, pd.DataFrame]:
-    team_df = latest_df[(latest_df["team_code"] == team_code) & (latest_df["min"] >= 10)].copy()
-    if team_df.empty:
-        return {"impact": team_df, "trend": team_df, "risk": team_df}
+    base_df = latest_df[(latest_df["team_code"] == team_code) & (latest_df["min"] >= 10)].copy()
+    if base_df.empty:
+        return {"impact": base_df, "trend": base_df, "risk": base_df}
 
-    ts_clipped = team_df["ts"].clip(0, 1)
-    score_cols = {
-        "impact": "ImpactNowScore",
-        "trend": "TrendScore",
-        "risk": "RiskScore",
-    }
+    result: dict[str, pd.DataFrame] = {}
 
-    team_df["ImpactNowScore"] = (
-        0.45 * _robust_norm(team_df["pts"])
-        + 0.35 * _robust_norm(ts_clipped - 0.55)
-        + 0.20 * _robust_norm(team_df["usage_proxy"])
-    )
+    impact_df = base_df[(base_df["usage_proxy"] >= 6) & (base_df["min"] >= 12)].copy()
+    if not impact_df.empty:
+        impact_ts_for_score = impact_df["ts"].clip(0, 0.80)
+        impact_df["ImpactNowScore"] = (
+            0.45 * _robust_norm(impact_df["pts"])
+            + 0.35 * _robust_norm(impact_ts_for_score - 0.55)
+            + 0.20 * _robust_norm(impact_df["usage_proxy"])
+        )
+        impact_df = impact_df.sort_values(["ImpactNowScore", "pts"], ascending=[False, False]).head(8)
+    result["impact"] = impact_df
 
-    team_df["TrendScore"] = (
-        0.40 * team_df["gog_ts"].clip(-0.5, 0.5)
-        + 0.30 * _robust_norm(team_df["gog_pts"])
-        + 0.20 * _robust_norm(team_df["gog_usage_proxy"])
-        + 0.10 * _robust_norm(team_df["r5_ts"] - 0.55)
-    )
+    trend_df = base_df[(base_df["usage_proxy"] >= 6) | (base_df["min"] >= 20)].copy()
+    if not trend_df.empty:
+        trend_df["TrendScore"] = (
+            0.40 * trend_df["gog_ts"].clip(-0.30, 0.30)
+            + 0.30 * _robust_norm(trend_df["gog_pts"])
+            + 0.20 * _robust_norm(trend_df["gog_usage_proxy"])
+            + 0.10 * _robust_norm(trend_df["r5_ts"] - 0.55)
+        )
+        trend_df = trend_df.sort_values(["TrendScore", "pts"], ascending=[False, False]).head(8)
+    result["trend"] = trend_df
 
-    usage_risk = (team_df["usage_proxy"] - 12).clip(lower=0)
+    risk_df = base_df.copy()
+    ts_clipped = risk_df["ts"].clip(0, 1)
+    usage_risk = (risk_df["usage_proxy"] - 12).clip(lower=0)
     ts_risk = (0.52 - ts_clipped).clip(lower=0)
-    to_risk = team_df["to"].clip(lower=0)
-    team_df["RiskScore"] = (
+    to_risk = risk_df["to"].clip(lower=0)
+    risk_df["RiskScore"] = (
         0.45 * _robust_norm(usage_risk)
         + 0.35 * _robust_norm(ts_risk)
         + 0.20 * _robust_norm(to_risk)
     )
-
-    result = {}
-    for key, score_col in score_cols.items():
-        result[key] = team_df.sort_values([score_col, "pts"], ascending=[False, False]).head(8)
+    result["risk"] = risk_df.sort_values(["RiskScore", "pts"], ascending=[False, False]).head(8)
     return result
 
 
@@ -231,12 +322,13 @@ def _format_table(
     cols = list(columns)
     if df.empty:
         header_cells = "".join(f"<th>{c}</th>" for c in cols)
-        return (
+        table_html = (
             "<table class='report-table'><thead><tr>"
             f"{header_cells}"
             "</tr></thead><tbody><tr><td colspan='"
             f"{len(cols)}'>No rows match filter.</td></tr></tbody></table>"
         )
+        return _inject_header_tooltips(table_html)
 
     render_df = df.loc[:, cols].copy()
     if "date" in render_df.columns:
@@ -252,10 +344,14 @@ def _format_table(
                 lambda v, b=badge_class: "" if pd.isna(v) else f"<span class='badge {b}'>{v:.3f}</span>"
             )
             continue
+        if col == "Confidence":
+            render_df[col] = render_df[col].map(lambda v: "" if pd.isna(v) else _render_confidence_badge(str(v)))
+            continue
         if pd.api.types.is_numeric_dtype(render_df[col]):
             render_df[col] = render_df[col].map(lambda v, c=col: _render_cell(v, c))
 
-    return render_df.to_html(index=False, escape=False, border=0, classes="report-table")
+    table_html = render_df.to_html(index=False, escape=False, border=0, classes="report-table")
+    return _inject_header_tooltips(table_html)
 
 
 def _build_team_section(
@@ -304,6 +400,13 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     oly_stack = _compute_stack_rankings(latest, "OLY")
     pan_summary = _latest_team_summary(latest, "PAN")
     oly_summary = _latest_team_summary(latest, "OLY")
+
+    pan_stack = {k: _add_confidence_and_flags(v) for k, v in pan_stack.items()}
+    oly_stack = {k: _add_confidence_and_flags(v) for k, v in oly_stack.items()}
+    pan_top_usage = _add_confidence_and_flags(pan_top_usage)
+    oly_top_usage = _add_confidence_and_flags(oly_top_usage)
+    pan_momentum = _add_confidence_and_flags(pan_momentum)
+    oly_momentum = _add_confidence_and_flags(oly_momentum)
 
     generated_at = datetime.now(timezone.utc)
     timestamp = generated_at.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -356,7 +459,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "r5_ts",
     ]
     watch_cols = ["date", "player_name", "min", "usage_proxy", "pts", "ts", "ast", "to", "r5_ts"]
-    usage_cols = ["date", "player_name", "min", "usage_proxy", "pts", "ts", "ast", "to", "r5_ts"]
+    usage_cols = ["date", "player_name", "min", "usage_proxy", "pts", "ts", "ast", "to", "r5_ts", "Confidence", "Flags"]
     momentum_cols = [
         "date",
         "player_name",
@@ -373,6 +476,8 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "FormScore",
         "r5_ts",
         "r5_usage_proxy",
+        "Confidence",
+        "Flags",
     ]
     stack_cols = [
         "player_name",
@@ -383,7 +488,11 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         "to",
         "gog_ts",
         "gog_pts",
+        "gog_usage_proxy",
+        "gog_min",
         "r5_ts",
+        "Confidence",
+        "Flags",
     ]
 
     html = f"""<!doctype html>
@@ -412,10 +521,20 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     .badge {{ padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }}
     .badge.good {{ background: #e8f7ee; color: #065f46; }}
     .badge.bad {{ background: #fde8e8; color: #991b1b; }}
+    .badge.conf-high {{ background: #e8f7ee; color: #065f46; }}
+    .badge.conf-med {{ background: #fff4db; color: #92400e; }}
+    .badge.conf-low {{ background: #fde8e8; color: #991b1b; }}
     .good {{ background: #e8f7ee; color: #065f46; font-weight: 600; }}
     .bad  {{ background: #fde8e8; color: #991b1b; font-weight: 600; }}
     .ok   {{ background: #f3f4f6; color: #111827; }}
     .tip {{ border-left: 4px solid #0f4c81; background: #eef6ff; padding: 10px 12px; border-radius: 6px; margin-top: 12px; }}
+    .legend {{ display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }}
+    .chip {{ padding: 4px 10px; border-radius: 999px; font-size: 0.82rem; font-weight: 700; }}
+    .chip.green {{ background: #e8f7ee; color: #065f46; }}
+    .chip.gray {{ background: #f3f4f6; color: #111827; }}
+    .chip.red {{ background: #fde8e8; color: #991b1b; }}
+    .info-icon {{ color: #6b7280; font-size: 0.8rem; margin-left: 4px; cursor: help; }}
+    .why-ranked ul {{ margin-top: 6px; margin-bottom: 12px; }}
     #definitions ul {{ margin-top: 6px; line-height: 1.6; }}
     #definitions code {{ background: #f3f4f6; padding: 2px 5px; border-radius: 4px; }}
   </style>
@@ -465,32 +584,49 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     <div class="tip">
       <strong>How to read this report:</strong> Start with <em>Stack-ranked Insights</em>, then verify context in <em>Top Usage</em>, then confirm direction in <em>Momentum Watch</em>. Treat TS above 1.0 as a likely small-sample/outlier artifact from limited attempts or free-throw weighting.
     </div>
+    <div class="legend">
+      <span class="chip green">Green: strong / positive</span>
+      <span class="chip gray">Gray: neutral</span>
+      <span class="chip red">Red: concerning / negative</span>
+    </div>
   </section>
 
   <section class="section">
     <h2>Stack-ranked Insights (per team)</h2>
-    <p class='note'>Scope: latest game per player, filtered to min ≥ 10. Top 8 per list for PAN and OLY.</p>
+    <p class='note'>Scope: latest game per player. Top 8 per list for PAN and OLY.</p>
     <div class="table-wrap">
       <h3>PAN</h3>
       <h4>Impact Now</h4>
+      <p class='note'>Filter guardrail: usage_proxy ≥ 6 and min ≥ 12; TS contribution capped at 0.80 for scoring.</p>
       {_format_table(pan_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
+      {_render_why_ranked(pan_stack['impact'], 'impact', 'ImpactNowScore')}
       <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
       <h4>Trend</h4>
+      <p class='note'>Filter guardrail: min ≥ 10 and (usage_proxy ≥ 6 or min ≥ 20); GoG TS contribution capped to ±0.30 for scoring.</p>
       {_format_table(pan_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
+      {_render_why_ranked(pan_stack['trend'], 'trend', 'TrendScore')}
       <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
       <h4>Risk</h4>
+      <p class='note'>Filter guardrail: min ≥ 10. Flags emphasize HIGH_TO and LOW_USAGE visibility.</p>
       {_format_table(pan_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
+      {_render_why_ranked(pan_stack['risk'], 'risk', 'RiskScore')}
       <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
 
       <h3>OLY</h3>
       <h4>Impact Now</h4>
+      <p class='note'>Filter guardrail: usage_proxy ≥ 6 and min ≥ 12; TS contribution capped at 0.80 for scoring.</p>
       {_format_table(oly_stack['impact'], stack_cols + ['ImpactNowScore'], score_badges={'ImpactNowScore': 'good'})}
+      {_render_why_ranked(oly_stack['impact'], 'impact', 'ImpactNowScore')}
       <p class='muted'>Prioritizes current production and efficiency: points, TS (centered at 0.55), and offensive load.</p>
       <h4>Trend</h4>
+      <p class='note'>Filter guardrail: min ≥ 10 and (usage_proxy ≥ 6 or min ≥ 20); GoG TS contribution capped to ±0.30 for scoring.</p>
       {_format_table(oly_stack['trend'], stack_cols + ['TrendScore'], score_badges={'TrendScore': 'good'})}
+      {_render_why_ranked(oly_stack['trend'], 'trend', 'TrendScore')}
       <p class='muted'>Prioritizes direction of change using GoG efficiency/volume plus rolling TS stability.</p>
       <h4>Risk</h4>
+      <p class='note'>Filter guardrail: min ≥ 10. Flags emphasize HIGH_TO and LOW_USAGE visibility.</p>
       {_format_table(oly_stack['risk'], stack_cols + ['RiskScore'], score_badges={'RiskScore': 'bad'})}
+      {_render_why_ranked(oly_stack['risk'], 'risk', 'RiskScore')}
       <p class='muted'>Higher score is worse: high usage burden, low TS, and turnovers raise risk.</p>
     </div>
   </section>
