@@ -10,6 +10,7 @@ from html import escape
 from pathlib import Path
 from typing import Iterable
 
+import numpy as np
 import pandas as pd
 
 from src.config import BASE_DIR, CURATED_DIR
@@ -495,20 +496,6 @@ def _prediction_block(season_code: str) -> str:
     pre_cutoff = game_date - pd.Timedelta(days=1)
     hist = team[team["date"] <= pre_cutoff].copy()
 
-    feat_cols = {
-        "r5_team_ts_pre": "d_r5_ts_pre",
-        "r5_team_efg_pre": "d_r5_efg_pre",
-        "r5_team_to_pre": "d_r5_to_pre",
-        "r5_margin_pre": "d_r5_margin_pre",
-        "r5_usage_conc_top3_pre": "d_r5_usage_conc_pre",
-    }
-
-    hist = hist.sort_values(["team_code", "date", "gamecode_num"], kind="stable")
-    for col in feat_cols:
-        hist[col] = hist.groupby("team_code", sort=False)[col.replace("_pre", "")].transform(
-            lambda s: s.shift(1).rolling(5, min_periods=1).mean()
-        )
-
     pan_home = next_game.get("home_team_code") == "PAN"
     opp = next_game.get("away_team_code") if pan_home else next_game.get("home_team_code")
     home_team = "PAN" if pan_home else opp
@@ -519,25 +506,47 @@ def _prediction_block(season_code: str) -> str:
     home_last = home_hist.iloc[-1] if not home_hist.empty else pd.Series(dtype=float)
     away_last = away_hist.iloc[-1] if not away_hist.empty else pd.Series(dtype=float)
 
-    feature_names = model["feature_names"]
-    values: dict[str, float] = {}
-    for raw_col, out_col in feat_cols.items():
-        h = float(home_last.get(raw_col, 0.0)) if not home_last.empty else 0.0
-        a = float(away_last.get(raw_col, 0.0)) if not away_last.empty else 0.0
-        values[out_col] = h - a
-    values["home"] = 1.0
+    try:
+        feature_names = model["feature_names"]
+        scaler_mean = np.asarray(model["scaler_mean"], dtype=float)
+        scaler_scale = np.asarray(model["scaler_scale"], dtype=float)
+        coef = np.asarray(model["coef"], dtype=float)
+        intercept = float(model["intercept"])
 
-    x = [float(values.get(name, 0.0)) for name in feature_names]
-    means = model["scaler_mean"]
-    scales = [s if s else 1.0 for s in model["scaler_scale"]]
-    z = [(xv - m) / s for xv, m, s in zip(x, means, scales)]
-    logit = float(model["intercept"] + sum(c * zv for c, zv in zip(model["coef"], z)))
-    p_home = 1 / (1 + math.exp(-logit))
+        features: dict[str, float] = {}
+        missing_features: list[str] = []
+        for feature_name in feature_names:
+            if not home_last.empty and feature_name in home_last.index:
+                features[feature_name] = float(home_last.get(feature_name, 0.0))
+            else:
+                features[feature_name] = 0.0
+                missing_features.append(feature_name)
+
+        if all(value == 0.0 for value in features.values()):
+            return (
+                "<section><h3>Next game prediction (Panathinaikos)</h3>"
+                "<p>Prediction unavailable due to insufficient feature data.</p></section>"
+            )
+
+        x = np.array([features[f] for f in feature_names], dtype=float)
+        scaler_scale = np.where(scaler_scale == 0, 1.0, scaler_scale)
+        x_scaled = (x - scaler_mean) / scaler_scale
+        z = intercept + np.dot(coef, x_scaled)
+        p_home = 1 / (1 + math.exp(-float(z)))
+
+        print(f"Prediction features used: {feature_names}")
+        print(f"Missing features defaulted to 0: {missing_features}")
+    except Exception:
+        return (
+            "<section><h3>Next game prediction (Panathinaikos)</h3>"
+            "<p>Prediction unavailable due to insufficient feature data.</p></section>"
+        )
+
     p_pan = p_home if pan_home else (1 - p_home)
 
     contrib = []
-    for name, coef, zv, xv in zip(feature_names, model["coef"], z, x):
-        contrib.append((name, coef * zv, xv))
+    for name, coef_i, z_i, x_i in zip(feature_names, coef, x_scaled, x):
+        contrib.append((name, float(coef_i * z_i), float(x_i)))
     top = sorted(contrib, key=lambda t: abs(t[1]), reverse=True)[:3]
     drivers = "".join(
         f"<li>{'+' if val >= 0 else '-'}{escape(name)} (value {raw:+.3f})</li>" for name, val, raw in top
