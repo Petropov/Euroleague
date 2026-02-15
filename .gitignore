@@ -9,3 +9,16 @@ __pycache__/
 
 # logs
 /logs/pipeline.log
+
+# Model artifacts
+
+data/models/
+*.pkl
+*.joblib
+
+# Data caches and binary assets
+
+*.parquet
+*.feather
+*.bin
+*.cache
