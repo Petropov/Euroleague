@@ -1,4 +1,4 @@
-"""Fetch/cache boxscores and build all-team player_game dataset."""
+"""Fetch/cache boxscores and build PAN/OLY player_game dataset."""
 
 from __future__ import annotations
 
@@ -107,7 +107,7 @@ def parse_player_rows(game_row: pd.Series, payload: dict, season_code: str, logg
 
 def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
     logger = get_logger(LOG_DIR / "pipeline.log")
-    games_path = CURATED_DIR / "games_all.csv"
+    games_path = CURATED_DIR / "games.csv"
     games_df = pd.read_csv(games_path) if games_path.exists() else run_fetch_results(season_code=season_code)
     if "season_code" in games_df.columns:
         games_df = games_df[games_df["season_code"] == season_code].copy()
@@ -115,7 +115,7 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
     if games_df.empty:
         logger.warning("No games available for boxscore fetching in %s", season_code)
         empty_df = pd.DataFrame()
-        empty_df.to_csv(CURATED_DIR / "player_game_all.csv", index=False)
+        empty_df.to_csv(CURATED_DIR / "player_game.csv", index=False)
         return empty_df
 
     session = build_session()
@@ -160,20 +160,16 @@ def run(season_code: str = DEFAULT_SEASON_CODE) -> pd.DataFrame:
         player_df = player_df.sort_values(["date", "gamecode_num", "team_code", "player_id"], kind="stable")
 
     CURATED_DIR.mkdir(parents=True, exist_ok=True)
-    player_df.to_csv(CURATED_DIR / "player_game_all.csv", index=False)
-
-    # compatibility output for PAN/OLY-only report tooling
-    if not player_df.empty:
-        pan_oly_df = player_df[player_df["team_code"].isin(TEAMS)].copy()
-        pan_oly_df.to_csv(CURATED_DIR / "player_game.csv", index=False)
+    player_df = player_df[player_df["team_code"].isin(TEAMS)].copy()
+    player_df.to_csv(CURATED_DIR / "player_game.csv", index=False)
 
     logger.info("Boxscores fetched=%s cached=%s for %s", fetched, cached, season_code)
-    logger.info("player_game_all rows written: %s", len(player_df))
+    logger.info("player_game rows written: %s", len(player_df))
     return player_df
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch EuroLeague boxscores and build player_game_all table")
+    parser = argparse.ArgumentParser(description="Fetch EuroLeague boxscores and build player_game table")
     parser.add_argument("--season", dest="season_code", default=DEFAULT_SEASON_CODE)
     args = parser.parse_args()
     run(season_code=args.season_code)

@@ -3,20 +3,14 @@
 from __future__ import annotations
 
 import argparse
-import json
-import math
 from datetime import datetime, timezone
 from html import escape
 from pathlib import Path
 from typing import Iterable
-from urllib.request import urlopen
-import xml.etree.ElementTree as ET
 
-import numpy as np
 import pandas as pd
 
-from src.config import BASE_DIR, CURATED_DIR
-from src.fetch_schedule import next_pan_game
+from src.config import BASE_DIR, CURATED_DIR, TEAMS
 
 REPORTS_DIR = BASE_DIR / "reports"
 
@@ -478,286 +472,19 @@ def _build_team_section(
     return f"<h4>{team_code}</h4>" f"<p class='note'>{note}</p>" f"{_format_table(filtered, columns)}"
 
 
-def _prediction_block(season_code: str) -> str:
-    model_path = BASE_DIR / "data" / "models" / f"win_model_{season_code}.json"
-    team_game_path = CURATED_DIR / "team_game.csv"
-    if not model_path.exists() or not team_game_path.exists():
-        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming PAN game found in schedules feed.</p></section>"
-
-    model = json.loads(model_path.read_text(encoding="utf-8"))
-    next_game = next_pan_game(season_code)
-    if not next_game:
-        return "<section><h3>Next game prediction (Panathinaikos)</h3><p>No upcoming PAN game found in schedules feed.</p></section>"
-
-    team = pd.read_csv(team_game_path)
-    if "season_code" in team.columns:
-        team = team[team["season_code"] == season_code].copy()
-    team["date"] = pd.to_datetime(team["date"], errors="coerce", utc=True)
-    game_date = pd.to_datetime(next_game.get("date"), errors="coerce", utc=True)
-
-    pre_cutoff = game_date - pd.Timedelta(days=1)
-    hist = team[team["date"] <= pre_cutoff].copy()
-
-    pan_home = next_game.get("home_team_code") == "PAN"
-    opp = next_game.get("away_team_code") if pan_home else next_game.get("home_team_code")
-    home_team = "PAN" if pan_home else opp
-    away_team = opp if pan_home else "PAN"
-
-    home_hist = hist[hist["team_code"] == home_team]
-    away_hist = hist[hist["team_code"] == away_team]
-    home_last = home_hist.iloc[-1] if not home_hist.empty else pd.Series(dtype=float)
-    away_last = away_hist.iloc[-1] if not away_hist.empty else pd.Series(dtype=float)
-
-    try:
-        feature_names = model["feature_names"]
-        scaler_mean = np.asarray(model["scaler_mean"], dtype=float)
-        scaler_scale = np.asarray(model["scaler_scale"], dtype=float)
-        coef = np.asarray(model["coef"], dtype=float)
-        intercept = float(model["intercept"])
-
-        features: dict[str, float] = {}
-        missing_features: list[str] = []
-        for feature_name in feature_names:
-            if not home_last.empty and feature_name in home_last.index:
-                features[feature_name] = float(home_last.get(feature_name, 0.0))
-            else:
-                features[feature_name] = 0.0
-                missing_features.append(feature_name)
-
-        if all(value == 0.0 for value in features.values()):
-            return (
-                "<section><h3>Next game prediction (Panathinaikos)</h3>"
-                "<p>Prediction unavailable due to insufficient feature data.</p></section>"
-            )
-
-        x = np.array([features[f] for f in feature_names], dtype=float)
-        scaler_scale = np.where(scaler_scale == 0, 1.0, scaler_scale)
-        x_scaled = (x - scaler_mean) / scaler_scale
-        z = intercept + np.dot(coef, x_scaled)
-        p_home = 1 / (1 + math.exp(-float(z)))
-
-        print(f"Prediction features used: {feature_names}")
-        print(f"Missing features defaulted to 0: {missing_features}")
-    except Exception:
-        return (
-            "<section><h3>Next game prediction (Panathinaikos)</h3>"
-            "<p>Prediction unavailable due to insufficient feature data.</p></section>"
-        )
-
-    p_pan = p_home if pan_home else (1 - p_home)
-
-    contrib = []
-    for name, coef_i, z_i, x_i in zip(feature_names, coef, x_scaled, x):
-        contrib.append((name, float(coef_i * z_i), float(x_i)))
-    top = sorted(contrib, key=lambda t: abs(t[1]), reverse=True)[:3]
-    drivers = "".join(
-        f"<li>{'+' if val >= 0 else '-'}{escape(name)} (value {raw:+.3f})</li>" for name, val, raw in top
-    )
-
-    pan_hist_games = len(hist[hist["team_code"] == "PAN"])
-    opp_hist_games = len(hist[hist["team_code"] == opp])
-    min_hist = min(pan_hist_games, opp_hist_games)
-    confidence = "HIGH" if min_hist >= 10 else ("MED" if min_hist >= 5 else "LOW")
-    ha = "Home" if pan_home else "Away"
-    game_date_text = game_date.strftime("%Y-%m-%d %H:%M UTC") if pd.notna(game_date) else "Unknown"
-
-    return (
-        "<section><h3>Next game prediction (Panathinaikos)</h3>"
-        f"<p><strong>Game:</strong> {game_date_text} vs {escape(str(opp))} ({ha})</p>"
-        f"<p><strong>Predicted PAN win probability:</strong> {p_pan * 100:.1f}%</p>"
-        f"<p><strong>Confidence:</strong> {confidence} (PAN prior games: {pan_hist_games}, Opp prior games: {opp_hist_games})</p>"
-        f"<p><strong>Top drivers</strong></p><ul>{drivers}</ul>"
-        "</section>"
-    )
-
-
-def _compute_upcoming_predictions(season_code: str, limit: int = 40) -> list[dict]:
-    schedule_url = f"https://api-live.euroleague.net/v1/schedules?seasonCode={season_code}"
-    try:
-        with urlopen(schedule_url, timeout=20) as response:
-            raw_xml = response.read()
-        root = ET.fromstring(raw_xml)
-    except Exception:
-        return []
-
-    future_games: list[dict[str, object]] = []
-    now_utc = datetime.utcnow()
-    for item in root.findall(".//item"):
-        date_str = (item.findtext("date") or "").strip()
-        if not date_str:
-            continue
-
-        try:
-            game_day = datetime.strptime(date_str, "%b %d, %Y")
-        except ValueError:
-            continue
-
-        time_str = (item.findtext("startime") or "").strip()
-        if time_str:
-            try:
-                game_time = datetime.strptime(time_str, "%H:%M")
-            except ValueError:
-                game_time = datetime.strptime("12:00", "%H:%M")
-        else:
-            game_time = datetime.strptime("12:00", "%H:%M")
-
-        game_dt = game_day.replace(hour=game_time.hour, minute=game_time.minute, second=0, microsecond=0)
-        if game_dt <= now_utc:
-            continue
-
-        future_games.append(
-            {
-                "gamecode": (item.findtext("gamecode") or "").strip(),
-                "game_dt": game_dt,
-                "homecode": (item.findtext("homecode") or "").strip(),
-                "awaycode": (item.findtext("awaycode") or "").strip(),
-                "hometeam": (item.findtext("hometeam") or "").strip(),
-                "awayteam": (item.findtext("awayteam") or "").strip(),
-            }
-        )
-
-    future_games = sorted(future_games, key=lambda g: g["game_dt"])[:limit]
-    if not future_games:
-        return []
-
-    model_path = BASE_DIR / "data" / "models" / f"win_model_{season_code}.json"
-    if not model_path.exists():
-        return []
-
-    try:
-        model = json.loads(model_path.read_text(encoding="utf-8"))
-        feature_names = model["feature_names"]
-        scaler_mean = np.asarray(model["scaler_mean"], dtype=float)
-        scaler_scale = np.asarray(model["scaler_scale"], dtype=float)
-        coef = np.asarray(model["coef"], dtype=float)
-        intercept = float(model["intercept"])
-    except Exception:
-        return []
-
-    history_path = CURATED_DIR / "team_game.csv"
-    if not history_path.exists():
-        return []
-
-    team_hist = pd.read_csv(history_path)
-    if "season_code" in team_hist.columns:
-        team_hist = team_hist[team_hist["season_code"] == season_code].copy()
-    team_hist["game_dt"] = pd.to_datetime(team_hist["date"], errors="coerce", utc=True).dt.tz_localize(None)
-    team_hist = team_hist.dropna(subset=["game_dt", "team_code"]).copy()
-    team_hist = team_hist.sort_values(["team_code", "game_dt", "gamecode_num"])
-
-    metric_cols = ["team_ts", "team_efg", "team_to", "margin", "usage_conc_top3"]
-
-    def _rolling(team_code: str, game_dt: datetime) -> tuple[dict[str, float], int]:
-        rows = team_hist[(team_hist["team_code"] == team_code) & (team_hist["game_dt"] < game_dt)]
-        rows = rows.tail(5)
-        count = len(rows)
-        stats: dict[str, float] = {}
-        for col in metric_cols:
-            if count == 0:
-                stats[col] = 0.0
-            else:
-                stats[col] = float(pd.to_numeric(rows[col], errors="coerce").dropna().mean()) if col in rows.columns else 0.0
-                if math.isnan(stats[col]):
-                    stats[col] = 0.0
-        return stats, count
-
-    scaler_scale = np.where(scaler_scale == 0, 1.0, scaler_scale)
-    predictions: list[dict] = []
-    for game in future_games:
-        game_dt = game["game_dt"]
-        home_stats, home_count = _rolling(str(game["homecode"]), game_dt)
-        away_stats, away_count = _rolling(str(game["awaycode"]), game_dt)
-
-        context: dict[str, float] = {
-            "home": 1.0,
-            "is_home": 1.0,
-            "home_adv": 1.0,
-        }
-        for col in metric_cols:
-            h = home_stats[col]
-            a = away_stats[col]
-            short = col.replace("team_", "")
-            context[col] = h
-            context[f"home_{col}"] = h
-            context[f"away_{col}"] = a
-            context[f"h_{col}"] = h
-            context[f"a_{col}"] = a
-            context[f"d_{col}"] = h - a
-            context[f"diff_{col}"] = h - a
-            context[f"d_{short}"] = h - a
-            context[f"home_{short}"] = h
-            context[f"away_{short}"] = a
-
-        missing_feature_count = 0
-        x_vals: list[float] = []
-        for feature_name in feature_names:
-            if feature_name in context:
-                x_vals.append(float(context[feature_name]))
-            else:
-                x_vals.append(0.0)
-                missing_feature_count += 1
-
-        x = np.asarray(x_vals, dtype=float)
-        x_scaled = (x - scaler_mean) / scaler_scale
-        z = intercept + float(np.dot(coef, x_scaled))
-        p_home = 1.0 / (1.0 + math.exp(-z))
-        p_away = 1.0 - p_home
-
-        confidence = "HIGH" if home_count >= 10 and away_count >= 10 else ("MED" if home_count >= 5 and away_count >= 5 else "LOW")
-
-        top_driver_idx = np.argsort(np.abs(coef * x_scaled))[::-1][:3]
-        drivers = [
-            f"{'+' if (coef[idx] * x_scaled[idx]) >= 0 else '-'}{feature_names[idx]}" for idx in top_driver_idx
-        ]
-
-        predictions.append(
-            {
-                "gamecode": game["gamecode"],
-                "game_datetime_utc": game_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "homecode": game["homecode"],
-                "awaycode": game["awaycode"],
-                "hometeam": game["hometeam"],
-                "awayteam": game["awayteam"],
-                "p_home_win": round(float(p_home), 4),
-                "p_away_win": round(float(p_away), 4),
-                "confidence": confidence,
-                "drivers": drivers,
-                "home_games_count": home_count,
-                "away_games_count": away_count,
-                "missing_feature_count": missing_feature_count,
-            }
-        )
-
-    return predictions
-
-
 def build_report(season_code: str) -> tuple[Path, Path, str]:
     games = _read_curated("games")
-    team_game = _read_curated("team_game")
-
-    games_all_fallback = False
-    try:
-        games_all = _read_curated("games_all")
-    except FileNotFoundError:
-        games_all = games
-        games_all_fallback = True
-
     player_game = _read_curated("player_game")
     player_gog = _read_curated("player_gog")
 
-    team_game_season = team_game[team_game["season_code"] == season_code].copy()
-    team_codes = sorted(team_game_season["team_code"].dropna().unique().tolist())
-    if not team_codes:
-        raise ValueError(f"No team_code values found in team_game for season '{season_code}'")
-    default_team = "PAN" if "PAN" in team_codes else team_codes[0]
+    team_codes = [team for team in ["PAN", "OLY"] if team in TEAMS]
 
-    games_all_season = games_all[games_all["season_code"] == season_code].copy()
     games_season = games[games["season_code"] == season_code].copy()
     player_game_season = player_game[player_game["season_code"] == season_code]
     player_gog_season = player_gog[player_gog["season_code"] == season_code]
 
     latest = _prepare_latest_by_player(player_gog, season_code, team_codes)
-    min_game_date, max_game_date = _extract_game_date_range(games_all_season)
+    min_game_date, max_game_date = _extract_game_date_range(games_season)
     team_data: dict[str, dict[str, object]] = {}
     for team in team_codes:
         stack = _compute_stack_rankings(latest, team)
@@ -780,15 +507,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
         warning_messages.append(
             "Warning: player_gog has 0 rows for this season. Tables are intentionally empty."
         )
-    if games_all_fallback:
-        warning_messages.append(
-            "games_all dataset missing; 'Total games parsed' is currently using PAN/OLY filtered games."
-        )
-
     warning_banner = "".join(f"<div class='warning'>{msg}</div>" for msg in warning_messages)
-    prediction_section = _prediction_block(season_code)
-    upcoming_limit = 40
-    upcoming_preds = _compute_upcoming_predictions(season_code, limit=upcoming_limit)
 
     points_cols = [
         "date",
@@ -883,21 +602,6 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
             team_data[team]["stack"]["risk"],
         )
 
-    report_data = {
-        "season_code": season_code,
-        "generated_at_utc": generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "default_team": default_team,
-        "team_codes": team_codes,
-        "games_date_range": {"min": min_game_date, "max": max_game_date},
-    }
-    report_data["upcoming_predictions"] = upcoming_preds
-    report_data["upcoming_predictions_meta"] = {
-        "season": season_code,
-        "generated_at_utc": generated_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "limit": upcoming_limit,
-    }
-    report_data_json = json.dumps(report_data, ensure_ascii=False, separators=(",", ":"))
-
     def _takeaway_html(items: list[str]) -> str:
         return "".join(f"<li>{item}</li>" for item in items)
 
@@ -951,11 +655,6 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     h1,h2,h3,h4 {{ margin: .4rem 0; }}
     .muted {{ color:#6b7280; }}
     .warning {{ background:#fff4e5; border:1px solid #f59e0b; border-radius:8px; padding:10px; margin:12px 0; }}
-    .tabs {{ display:flex; gap:8px; margin:14px 0; }}
-    .tab-btn {{ border:1px solid #cbd5e1; background:#fff; border-radius:999px; padding:8px 16px; font-weight:700; cursor:pointer; }}
-    .tab-btn.active {{ background:#1d4ed8; color:#fff; border-color:#1d4ed8; }}
-    .team-pane {{ display:none; }}
-    .team-pane.active {{ display:block; }}
     .team-header {{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap; }}
     .team-search {{ padding:8px 10px; min-width:260px; border:1px solid #cbd5e1; border-radius:8px; }}
     details {{ background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:8px 12px; margin:10px 0; }}
@@ -1002,12 +701,6 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     )}
   </section>
 
-  <div class='tabs'>
-    {"".join(
-      f"<button class='tab-btn{' active' if team == default_team else ''}' data-team='{team}' type='button'>{team}</button>"
-      for team in team_codes
-    )}
-  </div>
 
   {"".join(
     _team_block(
@@ -1021,7 +714,6 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
     for team in team_codes
   )}
 
-  {prediction_section}
 
   <details id='definitions' open>
     <summary>Definitions</summary>
@@ -1104,19 +796,7 @@ def build_report(season_code: str) -> tuple[Path, Path, str]:
   </div>
 
   <script>
-    const report_data = {report_data_json};
-    window.__REPORT_DATA__ = report_data;
-
     (() => {{
-      const tabButtons = document.querySelectorAll('.tab-btn');
-      const panes = document.querySelectorAll('.team-pane');
-      function setTeam(team) {{
-        tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.team === team));
-        panes.forEach((pane) => pane.classList.toggle('active', pane.dataset.team === team));
-      }}
-      tabButtons.forEach((btn) => btn.addEventListener('click', () => setTeam(btn.dataset.team)));
-      setTeam('{default_team}');
-
       document.querySelectorAll('.toggle-details').forEach((btn) => {{
         btn.addEventListener('click', () => {{
           const target = document.getElementById(btn.dataset.target);
