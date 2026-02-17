@@ -40,24 +40,15 @@ jobs:
           SEASON="${{ github.event.inputs.season_code || 'E2025' }}"
           python -m src.fetch_results --season "$SEASON"
           python -m src.fetch_boxscores --season "$SEASON"
-          python -m src.build_team_game --season "$SEASON"
-          python -m src.build_team_features --season "$SEASON"
-          python -m src.train_win_model --season "$SEASON"
           python -m src.build_player_gog --season "$SEASON"
           python -m src.build_report --season "$SEASON"
 
-      - name: Upload raw boxscore artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: raw-boxscore-cache
-          path: data/raw/boxscore
-          if-no-files-found: ignore
 
       - name: Commit curated updates
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/curated reports data/models
+          git add data/curated reports
           if git diff --cached --quiet; then
             echo "No curated changes to commit"
             exit 0

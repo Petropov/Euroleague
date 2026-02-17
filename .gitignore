@@ -26,3 +26,9 @@ data/models/
 *.cache
 data/raw/
 data/cache/
+
+# Deprecated model-pipeline outputs (do not commit)
+data/curated/player_game_all.csv
+data/curated/team_game.csv
+data/curated/model_train.csv
+data/models/win_model_*.json
